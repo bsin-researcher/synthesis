@@ -9,10 +9,10 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich import print as rprint
 from dotenv import load_dotenv
 
-from synthesis.retrieval import search_arxiv, search_openalex, search_nber
+from synthesis.retrieval import search_arxiv, search_openalex, search_nber, deduplicate
 from synthesis.extraction import extract_claims
 from synthesis.data import FredClient, fetch_worldbank
-from synthesis.alignment import score_alignment
+from synthesis.alignment import score_alignment, pool_evidence
 from synthesis.alignment.qqa import build_gap_matrix
 from synthesis.report import generate_report, build_html
 
@@ -79,10 +79,13 @@ def research(
         nber_papers = search_nber(question, max_results=max_papers // 3)
         prog.update(task, description=f"NBER: {len(nber_papers)} papers found")
 
-    all_papers = arxiv_papers + oa_papers + nber_papers
+    raw_papers = arxiv_papers + oa_papers + nber_papers
+    all_papers = deduplicate(raw_papers)
+    dupes = len(raw_papers) - len(all_papers)
     console.print(
         f"[green]✓[/green] {len(all_papers)} papers retrieved "
-        f"(arXiv: {len(arxiv_papers)}, OpenAlex: {len(oa_papers)}, NBER: {len(nber_papers)})"
+        f"(arXiv: {len(arxiv_papers)}, OpenAlex: {len(oa_papers)}, NBER: {len(nber_papers)}"
+        + (f", [dim]{dupes} duplicates removed[/dim])" if dupes else ")")
     )
 
     if not all_papers:
@@ -142,11 +145,18 @@ def research(
             for c in claims
         ]
 
+    # ── Step 5b: Meta-analytic pooling ───────────────────────────────────────
+    pooled = pool_evidence(claims)
+    console.print(
+        f"[green]✓[/green] Pooled evidence: [bold]{pooled.pooled_direction.upper()}[/bold] "
+        f"(score {pooled.weighted_score:+.2f}, {pooled.n_claims} claims)"
+    )
+
     # ── Step 6: Generate report ───────────────────────────────────────────────
     console.print("\n[bold blue]Generating Synthesis Report...[/bold blue]\n")
     console.print("─" * 70)
 
-    report_text = generate_report(question, claims, alignment, data_series, client)
+    report_text = generate_report(question, claims, alignment, data_series, pooled, client)
 
     console.print("\n" + "─" * 70)
 
@@ -163,7 +173,7 @@ def research(
 
     html_content = build_html(
         question, report_text, alignment, data_series, len(all_papers),
-        fred_count=len(fred_series), wb_count=len(wb_series),
+        fred_count=len(fred_series), wb_count=len(wb_series), pooled=pooled,
     )
     with open(html_path, "w") as f:
         f.write(html_content)

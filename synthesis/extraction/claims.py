@@ -7,13 +7,14 @@ from dataclasses import dataclass
 class Claim:
     variable_a: str
     variable_b: str
-    direction: str        # positive / negative / ambiguous / nonlinear
+    direction: str        # positive / negative / ambiguous / nonlinear / no_effect
     magnitude: str        # small / moderate / large / unclear
     methodology: str      # RCT / DiD / IV / OLS / structural / meta-analysis / other
     geography: str
     time_period: str
     confidence: str       # high / moderate / low / contested
     finding: str          # one-sentence plain English summary
+    effect_size: str      # numerical estimate if reported, e.g. "-0.1 to -0.3 elasticity"
     paper_title: str
     paper_url: str
 
@@ -46,6 +47,7 @@ Return a JSON array. Each item must have exactly these fields:
 - time_period: approximate period studied (e.g., "1990-2010", "post-2008", "long-run")
 - confidence: one of "high", "moderate", "low", "contested"
 - finding: one sentence in plain English summarizing the key finding
+- effect_size: the numerical effect size if reported (e.g., "-0.1 to -0.3 elasticity", "1-2pp employment loss", "10% wage increase → 0.5% unemployment increase"); write "unclear" if no number is given
 - paper_title: the paper title exactly as given
 - paper_url: the URL exactly as given
 

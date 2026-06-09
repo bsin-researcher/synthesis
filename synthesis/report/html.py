@@ -1,6 +1,7 @@
 import json
 from synthesis.data.fred import DataSeries
 from synthesis.alignment.qqa import AlignmentResult, build_gap_matrix
+from synthesis.alignment.meta import PooledEvidence
 
 
 BG    = "#0d1117"
@@ -109,6 +110,7 @@ def build_html(
     papers_count: int,
     fred_count: int = 0,
     wb_count: int = 0,
+    pooled: PooledEvidence | None = None,
 ) -> str:
     gap_matrix = build_gap_matrix([r.claim for r in alignment])
 
@@ -178,6 +180,18 @@ def build_html(
                     border-left:3px solid var(--org); border-radius:6px;
                     padding:10px 14px; margin-bottom:8px; font-size:13px;
                     color:var(--text); }}
+    .pooled-card {{ max-width:1100px; margin:28px auto 0; padding:0 32px; }}
+    .pooled-inner {{ border-radius:10px; padding:20px 24px;
+                     display:grid; grid-template-columns:auto 1fr; gap:0 24px;
+                     align-items:start; }}
+    .pooled-direction {{ font-size:28px; font-weight:900; letter-spacing:-0.5px; }}
+    .pooled-score {{ font-size:13px; color:var(--muted); margin-top:4px; }}
+    .pooled-statement {{ font-size:14px; color:var(--text); line-height:1.6; }}
+    .pooled-breakdown {{ display:flex; gap:16px; margin-top:10px; flex-wrap:wrap; }}
+    .pooled-pill {{ font-size:11px; padding:3px 10px; border-radius:4px;
+                    font-weight:700; background:rgba(255,255,255,0.06); color:var(--muted); }}
+    .effect-sizes {{ margin-top:10px; font-size:12px; color:var(--muted); }}
+    .effect-sizes li {{ list-style:disc; margin-left:16px; margin-bottom:3px; }}
     .footer {{ max-width:1100px; margin:60px auto 0; padding:20px 32px 0;
                border-top:1px solid var(--bord); color:var(--muted);
                font-size:12px; display:flex; justify-content:space-between; }}
@@ -283,6 +297,48 @@ def build_html(
   <div class="stat"><div class="num" style="color:var(--red)">{contradicted}</div><div class="lab">Contradicted by Data</div></div>
 </div>
 """
+
+    # Pooled evidence card
+    if pooled and pooled.n_claims > 0:
+        dir_colors = {
+            "positive":  (GREEN, "rgba(63,185,80,0.1)"),
+            "negative":  (RED,   "rgba(248,81,73,0.1)"),
+            "no_effect": (BLUE,  "rgba(88,166,255,0.1)"),
+            "mixed":     (ORG,   "rgba(255,166,87,0.1)"),
+        }
+        dcol, dbg = dir_colors.get(pooled.pooled_direction, (MUTED, f"rgba(139,148,158,0.1)"))
+        dir_label = {
+            "positive": "POSITIVE",
+            "negative": "NEGATIVE",
+            "no_effect": "NO CLEAR EFFECT",
+            "mixed": "MIXED",
+        }.get(pooled.pooled_direction, pooled.pooled_direction.upper())
+
+        methods_str = " · ".join(pooled.top_methods) if pooled.top_methods else "—"
+        h += f'<div class="pooled-card">'
+        h += (
+            f'<div class="pooled-inner" style="background:{dbg};border:1px solid {dcol}44;">'
+            f'<div>'
+            f'<div class="pooled-direction" style="color:{dcol}">{dir_label}</div>'
+            f'<div class="pooled-score">Weighted score: {pooled.weighted_score:+.2f} &nbsp;·&nbsp; '
+            f'{pooled.n_claims} claims &nbsp;·&nbsp; {pooled.high_confidence_count} high-confidence'
+            f'&nbsp;·&nbsp; Top methods: {methods_str}</div>'
+            f'</div>'
+            f'<div>'
+            f'<div class="pooled-statement">{pooled.consensus_statement}</div>'
+            f'<div class="pooled-breakdown">'
+            f'<span class="pooled-pill">▲ {pooled.n_positive} positive</span>'
+            f'<span class="pooled-pill">▼ {pooled.n_negative} negative</span>'
+            f'<span class="pooled-pill">— {pooled.n_no_effect} no effect</span>'
+            f'<span class="pooled-pill">~ {pooled.n_ambiguous} ambiguous</span>'
+            f'</div>'
+        )
+        if pooled.effect_sizes:
+            h += '<ul class="effect-sizes">'
+            for es in pooled.effect_sizes:
+                h += f"<li>{es}</li>"
+            h += "</ul>"
+        h += "</div></div></div>"
 
     # Report body
     h += '<div class="section"><div class="report-body">'

@@ -1,6 +1,7 @@
 import anthropic
 from synthesis.extraction.claims import Claim
 from synthesis.alignment.qqa import AlignmentResult, build_gap_matrix
+from synthesis.alignment.meta import PooledEvidence
 from synthesis.data.fred import DataSeries
 
 
@@ -9,6 +10,7 @@ def generate_report(
     claims: list[Claim],
     alignment: list[AlignmentResult],
     data_series: list[DataSeries],
+    pooled: PooledEvidence,
     client: anthropic.Anthropic,
 ) -> str:
     gap_matrix = build_gap_matrix(claims)
@@ -26,11 +28,25 @@ def generate_report(
     ) or "All claims have some empirical coverage."
 
     data_summary = "\n".join(
-        f"- {s.title} ({s.series_id}): latest {s.summary().get('latest_value')} {s.units}, "
+        f"- {'[World Bank] ' if s.series_id.startswith('WB:') else '[FRED] '}"
+        f"{s.title} ({s.series_id}): latest {s.summary().get('latest_value')} {s.units}, "
         f"range {s.summary().get('min')}–{s.summary().get('max')}, "
         f"period {s.summary().get('start')} to {s.summary().get('end')}"
         for s in data_series
     ) or "No empirical data retrieved."
+
+    pooled_summary = (
+        f"POOLED META-ANALYTIC ESTIMATE:\n"
+        f"Direction: {pooled.pooled_direction.upper()} | "
+        f"Weighted score: {pooled.weighted_score:+.2f} | "
+        f"Claims: {pooled.n_claims} ({pooled.high_confidence_count} high-confidence)\n"
+        f"Breakdown: {pooled.n_positive} positive, {pooled.n_negative} negative, "
+        f"{pooled.n_no_effect} no_effect, {pooled.n_ambiguous} ambiguous\n"
+        f"Top methods by weight: {', '.join(pooled.top_methods)}\n"
+        f"Consensus: {pooled.consensus_statement}"
+        + (f"\nEffect sizes reported:\n" + "\n".join(f"  - {e}" for e in pooled.effect_sizes)
+           if pooled.effect_sizes else "")
+    )
 
     gaps_text = "\n".join(
         f"- {g['note']}" for g in gap_matrix.get("unstudied_combinations", [])
@@ -43,10 +59,12 @@ def generate_report(
 
 RESEARCH QUESTION: "{question}"
 
+{pooled_summary}
+
 LITERATURE CLAIMS WITH QQA ALIGNMENT SCORES:
 {claims_summary}
 
-EMPIRICAL DATA (FRED):
+EMPIRICAL DATA (FRED + World Bank):
 {data_summary}
 
 CLAIMS WITH INSUFFICIENT EMPIRICAL COVERAGE:
