@@ -16,7 +16,7 @@ def search_nber(query: str, max_results: int = 8) -> list[Paper]:
         "filter": f"institutions.id:{NBER_INSTITUTION_ID},has_abstract:true",
         "sort": "relevance_score:desc",
         "per-page": max_results,
-        "select": "title,authorships,abstract_inverted_index,doi,publication_year",
+        "select": "title,authorships,abstract_inverted_index,doi,publication_year,cited_by_count",
         "mailto": "research@synthesis-econ.io",
     }
     try:
@@ -36,9 +36,11 @@ def search_nber(query: str, max_results: int = 8) -> list[Paper]:
             a.get("author", {}).get("display_name", "")
             for a in (r.get("authorships") or [])[:3]
         ]
+        citations = int(r.get("cited_by_count") or 0)
         if title and abstract:
             papers.append(Paper(title=title, authors=authors, abstract=abstract,
-                                url=doi, published=year, source="nber"))
+                                url=doi, published=year, source="nber",
+                                citations=citations))
 
     time.sleep(0.3)
     return papers

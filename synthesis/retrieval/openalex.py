@@ -14,7 +14,7 @@ def search_openalex(query: str, max_results: int = 10) -> list[Paper]:
         "filter": "has_abstract:true,type:article",
         "sort": "relevance_score:desc",
         "per-page": max_results,
-        "select": "title,authorships,abstract_inverted_index,doi,publication_year,topics",
+        "select": "title,authorships,abstract_inverted_index,doi,publication_year,topics,cited_by_count",
         "mailto": "research@synthesis-econ.io",
     }
     try:
@@ -34,9 +34,11 @@ def search_openalex(query: str, max_results: int = 10) -> list[Paper]:
             a.get("author", {}).get("display_name", "")
             for a in (r.get("authorships") or [])[:3]
         ]
+        citations = int(r.get("cited_by_count") or 0)
         if title and abstract:
             papers.append(Paper(title=title, authors=authors, abstract=abstract,
-                                url=doi, published=year, source="openalex"))
+                                url=doi, published=year, source="openalex",
+                                citations=citations))
 
     time.sleep(0.3)
     return papers

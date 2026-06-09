@@ -16,6 +16,7 @@ class Paper:
     url: str
     published: str
     source: str = "arxiv"
+    citations: int = 0
 
 
 def search_arxiv(query: str, max_results: int = 15) -> list[Paper]:

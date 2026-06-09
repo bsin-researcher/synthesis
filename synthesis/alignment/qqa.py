@@ -10,6 +10,7 @@ It then builds a gap matrix identifying which claim types lack empirical coverag
 
 import json
 import anthropic
+import pandas as pd
 from dataclasses import dataclass
 from synthesis.extraction.claims import Claim
 from synthesis.data.fred import DataSeries
@@ -34,6 +35,16 @@ class AlignmentResult:
     explanation: str         # one sentence
 
 
+def _series_to_trend(s: DataSeries, max_points: int = 12) -> str:
+    """Annual time series as 'year: value' pairs — gives Claude actual trends to reason about."""
+    df = s.data.dropna(subset=["value"]).copy()
+    if df.empty:
+        return "no data"
+    df["year"] = pd.to_datetime(df["date"]).dt.year
+    annual = df.groupby("year")["value"].last().tail(max_points)
+    return " | ".join(f"{yr}: {round(val, 2)}" for yr, val in annual.items())
+
+
 def score_alignment(
     claims: list[Claim],
     data_series: list[DataSeries],
@@ -43,10 +54,11 @@ def score_alignment(
         return []
 
     data_summaries = "\n".join(
-        f"- {s.series_id}: {s.title} | units: {s.units} | "
-        f"latest: {s.summary().get('latest_value')} | "
-        f"range: {s.summary().get('min')}–{s.summary().get('max')} | "
-        f"period: {s.summary().get('start')} to {s.summary().get('end')}"
+        f"- {s.series_id}: {s.title} ({s.units})\n"
+        f"  Trend: {_series_to_trend(s)}\n"
+        f"  Summary: latest={s.summary().get('latest_value')}, "
+        f"range={s.summary().get('min')}–{s.summary().get('max')}, "
+        f"period={s.summary().get('start', '')[:4]}–{s.summary().get('end', '')[:4]}"
         for s in data_series
     )
 
@@ -56,21 +68,31 @@ def score_alignment(
         for i, c in enumerate(claims, 1)
     )
 
-    prompt = f"""You are an expert quantitative economist assessing how well empirical data supports theoretical claims from the literature.
+    prompt = f"""You are an expert quantitative economist assessing how well empirical time-series data supports theoretical claims from the literature.
 
 LITERATURE CLAIMS:
 {claims_text}
 
-AVAILABLE EMPIRICAL DATA:
+AVAILABLE EMPIRICAL DATA (with year-by-year trends):
 {data_summaries}
 
-For each claim, assess how well the available data supports or contradicts it.
+For each claim, assess alignment using the actual trend data, not just levels.
+Key questions to ask: Does the direction of movement in the data match the predicted direction?
+Is there identifying variation (e.g., a policy change, a structural break)? Or is the data flat/uninformative?
+
+Support levels:
+- strongly_supported: trend clearly moves in the predicted direction with sufficient variation
+- supported: trend broadly consistent with the claim, some noise
+- neutral: data exists but shows no clear pattern relevant to the claim
+- contradicted: trend moves opposite to the claim's prediction
+- strongly_contradicted: clear, sharp movement opposite to prediction
+- insufficient_data: no relevant series, or the series has no identifying variation for this claim
 
 Return a JSON array with one item per claim (same order). Each item:
-- claim_index: integer (1-based, matching claim number above)
-- support_level: one of "strongly_supported", "supported", "neutral", "contradicted", "strongly_contradicted", "insufficient_data"
-- data_series_used: list of FRED series IDs used in this assessment (empty list if none relevant)
-- explanation: one sentence explaining the alignment or why data is insufficient
+- claim_index: integer (1-based)
+- support_level: one of the six levels above
+- data_series_used: list of series IDs used (empty if none)
+- explanation: one precise sentence — what the trend shows and why it supports/contradicts/is uninformative
 
 Return ONLY the JSON array."""
 

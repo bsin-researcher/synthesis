@@ -1,11 +1,11 @@
 """
 Meta-analytic pooling for Synthesis.
 
-Weights each extracted claim by methodology quality and confidence level,
-then computes a pooled direction, weighted consensus score, and evidence
-quality summary. This is the Sprint 2 core contribution.
+Weights each extracted claim by methodology quality × confidence × log(citations+1),
+then computes a pooled direction score and consensus statement.
 """
 
+import math
 from dataclasses import dataclass
 from synthesis.extraction.claims import Claim
 
@@ -85,7 +85,8 @@ def pool_evidence(claims: list[Claim]) -> PooledEvidence:
     for c in claims:
         mw = METHOD_WEIGHTS.get(c.methodology, 1)
         cw = CONFIDENCE_MULT.get(c.confidence, 0.3)
-        weight = mw * cw
+        cite_w = math.log(getattr(c, "citations", 0) + 1) + 1  # +1 floor so uncited claims still count
+        weight = mw * cw * cite_w
 
         d = c.direction if c.direction in DIRECTION_SCORE else "ambiguous"
         direction_counts[d] = direction_counts.get(d, 0) + 1

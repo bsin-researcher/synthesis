@@ -17,16 +17,21 @@ class Claim:
     effect_size: str      # numerical estimate if reported, e.g. "-0.1 to -0.3 elasticity"
     paper_title: str
     paper_url: str
+    citations: int = 0    # citation count of the source paper
 
 
 def extract_claims(papers: list, question: str, client: anthropic.Anthropic) -> list[Claim]:
     if not papers:
         return []
 
+    # Build citation lookup for use after extraction
+    citation_lookup: dict[str, int] = {p.title: getattr(p, "citations", 0) for p in papers}
+
     abstracts_text = ""
     for i, p in enumerate(papers[:20], 1):
         authors = ", ".join(p.authors[:2]) + (" et al." if len(p.authors) > 2 else "")
-        abstracts_text += f"\n[{i}] {p.title}\nAuthors: {authors} ({p.published})\n{p.abstract}\nURL: {p.url}\n"
+        cite_str = f"Citations: {p.citations}\n" if getattr(p, "citations", 0) > 0 else ""
+        abstracts_text += f"\n[{i}] {p.title}\nAuthors: {authors} ({p.published})\n{cite_str}{p.abstract}\nURL: {p.url}\n"
 
     prompt = f"""You are an expert economist extracting structured research claims from paper abstracts.
 
@@ -82,7 +87,11 @@ Return ONLY the JSON array, no other text."""
     claims = []
     for item in items:
         try:
-            claims.append(Claim(**{k: str(v) for k, v in item.items()}))
+            kwargs = {k: str(v) for k, v in item.items() if k != "citations"}
+            # Inject citation count from paper lookup
+            title = kwargs.get("paper_title", "")
+            kwargs["citations"] = citation_lookup.get(title, 0)
+            claims.append(Claim(**kwargs))
         except (TypeError, KeyError):
             pass
     return claims
