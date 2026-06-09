@@ -1,0 +1,23 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+venv/
+env/
+.venv/
+*.egg
+
+# outputs
+synthesis_output/
+
+# env
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store
