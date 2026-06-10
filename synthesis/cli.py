@@ -103,8 +103,8 @@ def research(
     # ── Step 2b: Extract numerical effect sizes ───────────────────────────────
     with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"),
                   console=console) as prog:
-        prog.add_task("Extracting numerical effect sizes from abstracts...", total=None)
-        effect_sizes = extract_effect_sizes(all_papers, question, client)
+        prog.add_task("Extracting numerical effect sizes from claims...", total=None)
+        effect_sizes = extract_effect_sizes(all_papers, question, client, claims=claims)
 
     if effect_sizes:
         console.print(f"[green]✓[/green] {len(effect_sizes)} numerical effect sizes extracted")
