@@ -148,7 +148,16 @@ def _compute_one(
     if series_b is None and series_a is None:
         return no_data
 
-    ann_b = _to_annual(series_b) if series_b else None
+    # Case: series_a exists but series_b does not
+    if series_b is None:
+        return AlignmentStats(
+            claim_index=idx, series_a_id=series_a.series_id, series_b_id=None,
+            correlation=None, slope=None, p_value=None, n_obs=0,
+            cv_a=None, statistical_support="no_data",
+            data_summary=f"No series for outcome variable '{claim.variable_b}' — cannot test relationship.",
+        )
+
+    ann_b = _to_annual(series_b)
     ann_a = _to_annual(series_a) if series_a else None
 
     # Case: only variable_b available — can't test the relationship
