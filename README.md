@@ -66,7 +66,7 @@ The HTML report opens automatically in your browser.
 ## Install from Source
 
 ```bash
-git clone https://github.com/blakesinclair/synthesis.git
+git clone https://github.com/bsin-researcher/synthesis.git
 cd synthesis
 pip install -e .
 ```
@@ -107,16 +107,41 @@ Your question
 
 **Question:** Does raising the minimum wage increase unemployment?
 
-**Papers:** 24 (arXiv: 8, OpenAlex: 8, NBER: 8)  
-**Claims extracted:** 10  
+**Papers:** 22 (arXiv: 8, OpenAlex: 8, NBER: 8, 2 duplicates removed)  
+**Claims extracted:** 14  
 **FRED series:** Federal Minimum Wage, Unemployment Rate, Nonfarm Payrolls, Labor Force Participation  
-**World Bank series:** Unemployment, total (% of labor force)
+**World Bank series:** Unemployment total (% of labor force), Labor Force Participation  
+**Pooled estimate:** NEGATIVE −0.17 (weighted by method quality × confidence × citations)
 
-> **Consensus:** No detectable disemployment effect from realistic minimum wage increases — a 138-change US DiD study and the 2022 German 22% hike both find employment essentially unchanged. Adjustment occurs on the *hours* margin, not headcount.
+**Statistical QQA results (actual tests, not summaries):**
+- ΔSTTMINWGFG → ΔUNRATE: Spearman r=0.239, OLS slope=+2.29, **p=0.034** — significant but cycle-confounded
+- ΔSTTMINWGFG → ΔPAYEMS: Spearman r=−0.422, OLS slope=−5705, **p=0.036** — supports disemployment direction
+- Federal minimum frozen at $7.25 since 2009: CV of Δ=0.00031 → correctly flagged as **insufficient_variation**
+
+> **Verdict:** Directionally negative, small, margin-shifting, and badly under-identified at the level where policy actually binds. Adjustment runs through hours and slowed hiring, not stock job losses.
 >
-> **Key tension:** Structural search-friction models predict disemployment by construction; DiD studies find none. The reconciliation is a monopsony nonlinearity — disemployment appears only in competitive markets (German IV result), vanishes under labor-market concentration.
->
-> **Top gap:** A US IV study interacting minimum wage changes with local labor-market concentration (HHI) — the German monopsony result has never been replicated on US data.
+> **Top gap:** Contiguous-county-pair DiD on the post-2009 real-minimum-wage decline — tests the inverse natural experiment (falling real floor) that no one has run.
+
+---
+
+## Benchmark: Synthesis vs. Consensus
+
+Same question: *"Does raising the minimum wage increase unemployment?"*
+
+| | **Synthesis** | **Consensus** |
+|--|--|--|
+| Papers retrieved | 22 (3 sources, deduplicated) | 16 |
+| Verdict | NEGATIVE −0.17 (weighted pooled) | 56% No, 31% Yes |
+| Quantitative data | FRED + World Bank (6 series) | None |
+| Statistical tests | Spearman r, OLS slope, p-values | None |
+| Confound detection | Flagged business-cycle contamination | Not mentioned |
+| Research gap matrix | 8 unstudied method × geography cells | None |
+| Research directions | 5 with identification strategies | None |
+| Citation weighting | Yes (log-scaled by paper citations) | Unknown |
+
+**Consensus** is excellent for a quick literature read — intuitive verdict meter, clean country table, fast. Use it to find out *what* the literature says.
+
+**Synthesis** is for researchers who need to know *why* the data can or can't test a claim, *where* the gaps are, and *how* to close them. It is the only tool that aligns theoretical claims against real economic data with actual statistical tests.
 
 ---
 
@@ -165,18 +190,18 @@ python-dotenv>=1.0.0
 
 ## Roadmap
 
-- [x] arXiv + OpenAlex + NBER retrieval
-- [x] Claude-powered structured claim extraction (adaptive thinking)
+- [x] arXiv + OpenAlex + NBER retrieval with deduplication (DOI + title)
+- [x] Claude-powered structured claim extraction (adaptive thinking, citations included)
 - [x] FRED + World Bank empirical data (series chosen by Claude)
-- [x] QQA alignment scoring
-- [x] Research gap matrix
-- [x] Interactive Plotly HTML report
+- [x] Statistical QQA — Spearman r + OLS on first differences, p-value thresholds, flat-series detection
+- [x] Citation-weighted meta-analytic pooling (method quality × confidence × log citations)
+- [x] Research gap matrix (unstudied methodology × geography combinations)
+- [x] Interactive Plotly HTML report with pooled evidence card
+- [x] Benchmark vs Consensus (see table above)
+- [ ] Confidence intervals on pooled score (bootstrap)
 - [ ] Semantic deduplication across sources (sentence-transformers)
-- [ ] Numerical effect size extraction and meta-analytic pooling
-- [ ] Formal QQA with confidence intervals
-- [ ] Citation importance weighting (h-index, citation count)
 - [ ] PDF and LaTeX export
-- [ ] Benchmark vs Elicit, Consensus, Semantic Scholar
+- [ ] Jupyter notebook mode
 
 ---
 
@@ -189,7 +214,7 @@ If you use Synthesis in your research:
   author  = {Sinclair, Blake},
   title   = {Synthesis: AI-Powered Economics Research via Quantitative-Qualitative Alignment},
   year    = {2026},
-  url     = {https://github.com/blakesinclair/synthesis},
+  url     = {https://github.com/bsin-researcher/synthesis},
 }
 ```
 
