@@ -15,6 +15,7 @@ setup(
         "requests>=2.34.0",
         "pandas>=2.0.0",
         "plotly>=5.20.0",
+        "scipy>=1.10.0",
         "rich>=13.0.0",
         "typer>=0.9.0",
         "python-dotenv>=1.0.0",

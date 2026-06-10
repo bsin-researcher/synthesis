@@ -1,11 +1,9 @@
 """
-Quantitative-Qualitative Alignment (QQA)
+QQA (Quantitative-Qualitative Alignment) — main scoring pipeline.
 
-The core technical contribution of Synthesis.
-
-For each theoretical claim extracted from the literature, QQA scores how well
-the empirical data supports, contradicts, or fails to address it.
-It then builds a gap matrix identifying which claim types lack empirical coverage.
+Support levels are determined by statistical tests in stats.py.
+Claude's role is ONLY to write the plain-English explanation citing
+the actual numbers — it does NOT decide the verdict.
 """
 
 import json
@@ -14,35 +12,38 @@ import pandas as pd
 from dataclasses import dataclass
 from synthesis.extraction.claims import Claim
 from synthesis.data.fred import DataSeries
+from synthesis.alignment.stats import (
+    AlignmentStats,
+    map_variables_to_series,
+    compute_alignment_stats,
+)
 
 
 SUPPORT_LEVELS = {
-    "strongly_supported": 2,
-    "supported": 1,
-    "neutral": 0,
-    "contradicted": -1,
+    "strongly_supported":     2,
+    "supported":              1,
+    "neutral":                0,
+    "contradicted":          -1,
     "strongly_contradicted": -2,
-    "insufficient_data": None,
+    "insufficient_variation": None,
+    "no_data":                None,
+}
+
+# Map stats module names → legacy "insufficient_data" for backwards compat in report
+_DISPLAY_MAP = {
+    "insufficient_variation": "insufficient_data",
+    "no_data":                "insufficient_data",
 }
 
 
 @dataclass
 class AlignmentResult:
     claim: Claim
-    support_level: str       # from SUPPORT_LEVELS
+    support_level: str        # from SUPPORT_LEVELS
     support_score: int | None
     data_series_used: list[str]
-    explanation: str         # one sentence
-
-
-def _series_to_trend(s: DataSeries, max_points: int = 12) -> str:
-    """Annual time series as 'year: value' pairs — gives Claude actual trends to reason about."""
-    df = s.data.dropna(subset=["value"]).copy()
-    if df.empty:
-        return "no data"
-    df["year"] = pd.to_datetime(df["date"]).dt.year
-    annual = df.groupby("year")["value"].last().tail(max_points)
-    return " | ".join(f"{yr}: {round(val, 2)}" for yr, val in annual.items())
+    explanation: str          # one sentence, cites actual statistics
+    stats: AlignmentStats | None = None
 
 
 def score_alignment(
@@ -53,93 +54,90 @@ def score_alignment(
     if not claims or not data_series:
         return []
 
-    data_summaries = "\n".join(
-        f"- {s.series_id}: {s.title} ({s.units})\n"
-        f"  Trend: {_series_to_trend(s)}\n"
-        f"  Summary: latest={s.summary().get('latest_value')}, "
-        f"range={s.summary().get('min')}–{s.summary().get('max')}, "
-        f"period={s.summary().get('start', '')[:4]}–{s.summary().get('end', '')[:4]}"
-        for s in data_series
-    )
+    # Step 1: Map claim variables to data series (cheap Claude call, no thinking)
+    mapping = map_variables_to_series(claims, data_series, client)
 
+    # Step 2: Compute statistical alignment (pure Python/scipy — no Claude)
+    stat_list = compute_alignment_stats(claims, data_series, mapping)
+
+    # Step 3: Ask Claude to explain each result in plain English
+    # Claude sees the numbers and writes ONE sentence per claim.
+    # It does NOT decide the support level.
+    stats_context = "\n".join(
+        f"[{s.claim_index + 1}] verdict={s.statistical_support} | {s.data_summary}"
+        for s in stat_list
+    )
     claims_text = "\n".join(
-        f"[{i}] {c.variable_a} → {c.variable_b} | direction: {c.direction} | "
-        f"method: {c.methodology} | confidence: {c.confidence} | finding: {c.finding}"
-        for i, c in enumerate(claims, 1)
+        f"[{i + 1}] {c.variable_a} → {c.variable_b} ({c.direction}) | "
+        f"method: {c.methodology} | finding: {c.finding}"
+        for i, c in enumerate(claims)
     )
 
-    prompt = f"""You are an expert quantitative economist assessing how well empirical time-series data supports theoretical claims from the literature.
+    prompt = f"""You are an econometrician explaining statistical alignment results in plain English.
 
-LITERATURE CLAIMS:
+CLAIMS:
 {claims_text}
 
-AVAILABLE EMPIRICAL DATA (with year-by-year trends):
-{data_summaries}
+STATISTICAL RESULTS (already computed — do NOT override the verdict):
+{stats_context}
 
-For each claim, assess alignment using the actual trend data, not just levels.
-Key questions to ask: Does the direction of movement in the data match the predicted direction?
-Is there identifying variation (e.g., a policy change, a structural break)? Or is the data flat/uninformative?
+For each claim, write ONE precise sentence explaining what the statistics mean in economic terms.
+Reference specific numbers (correlation, slope, p-value, CV) where available.
+If the verdict is insufficient_variation, explain WHY (e.g., "the minimum wage has been
+frozen at $7.25 since 2009, so Δ series has near-zero variance and cannot identify any effect").
 
-Support levels:
-- strongly_supported: trend clearly moves in the predicted direction with sufficient variation
-- supported: trend broadly consistent with the claim, some noise
-- neutral: data exists but shows no clear pattern relevant to the claim
-- contradicted: trend moves opposite to the claim's prediction
-- strongly_contradicted: clear, sharp movement opposite to prediction
-- insufficient_data: no relevant series, or the series has no identifying variation for this claim
-
-Return a JSON array with one item per claim (same order). Each item:
-- claim_index: integer (1-based)
-- support_level: one of the six levels above
-- data_series_used: list of series IDs used (empty if none)
-- explanation: one precise sentence — what the trend shows and why it supports/contradicts/is uninformative
+Return a JSON array:
+- claim_index: int (1-based)
+- explanation: one sentence
 
 Return ONLY the JSON array."""
 
-    resp = client.messages.create(
-        model="claude-opus-4-8",
-        max_tokens=2048,
-        thinking={"type": "adaptive"},
-        messages=[{"role": "user", "content": prompt}],
-    )
-
-    raw = ""
-    for block in resp.content:
-        if block.type == "text":
-            raw = block.text.strip()
-            break
-
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-    raw = raw.strip()
-
+    explanations: dict[int, str] = {}
     try:
-        scored = json.loads(raw)
-    except json.JSONDecodeError:
-        return []
+        resp = client.messages.create(
+            model="claude-opus-4-8",
+            max_tokens=2048,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = resp.content[0].text.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        for item in json.loads(raw.strip()):
+            explanations[int(item["claim_index"]) - 1] = item.get("explanation", "")
+    except Exception:
+        pass
 
     results = []
-    for item in scored:
-        idx = item.get("claim_index", 1) - 1
-        if 0 <= idx < len(claims):
-            level = item.get("support_level", "insufficient_data")
-            results.append(AlignmentResult(
-                claim=claims[idx],
-                support_level=level,
-                support_score=SUPPORT_LEVELS.get(level),
-                data_series_used=item.get("data_series_used", []),
-                explanation=item.get("explanation", ""),
-            ))
+    for i, (claim, stat) in enumerate(zip(claims, stat_list)):
+        raw_level = stat.statistical_support
+        display_level = _DISPLAY_MAP.get(raw_level, raw_level)
+        explanation = explanations.get(i, stat.data_summary)
+        used = [s for s in [stat.series_a_id, stat.series_b_id] if s]
+        results.append(AlignmentResult(
+            claim=claim,
+            support_level=display_level,
+            support_score=SUPPORT_LEVELS.get(raw_level),
+            data_series_used=used,
+            explanation=explanation,
+            stats=stat,
+        ))
+
     return results
 
 
+def _series_to_trend(s: DataSeries, max_points: int = 12) -> str:
+    """Annual time series as 'year: value' pairs."""
+    df = s.data.dropna(subset=["value"]).copy()
+    if df.empty:
+        return "no data"
+    df["year"] = pd.to_datetime(df["date"]).dt.year
+    annual = df.groupby("year")["value"].last().tail(max_points)
+    return " | ".join(f"{yr}: {round(val, 2)}" for yr, val in annual.items())
+
+
 def build_gap_matrix(claims: list[Claim]) -> dict:
-    """
-    Identify understudied combinations of methodology × geography × time period.
-    These are where new research opportunities live.
-    """
     seen = set()
     for c in claims:
         seen.add((c.methodology, c.geography, c.time_period))
