@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="synthesis-econ",
-    version="0.3.0",
+    version="0.4.0",
     author="Blake Sinclair",
     description="AI-powered economics research tool: QQA alignment of literature and empirical data.",
     long_description=open("README.md").read(),

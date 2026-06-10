@@ -1,38 +1,64 @@
 # Synthesis
 
-**AI-powered economics research briefs combining qualitative literature and quantitative data.**
+**AI-powered economics research briefs — literature claims tested against real data.**
 
-Synthesis retrieves papers from arXiv, OpenAlex, and NBER, extracts structured empirical claims using Claude, pulls FRED and World Bank time-series data, and scores theory against evidence using a novel **Quantitative-Qualitative Alignment (QQA)** method — all in a single command.
+[![PyPI](https://img.shields.io/pypi/v/synthesis-econ)](https://pypi.org/project/synthesis-econ/)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://pypi.org/project/synthesis-econ/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+**[→ Live Demo](https://synthesis-econ.streamlit.app)** — browse 6 pre-run research briefs instantly, no install required.
+
+---
+
+Synthesis retrieves papers from arXiv, OpenAlex, and NBER, extracts structured empirical claims using Claude, pulls FRED, World Bank, and BLS time-series data, and scores theory against evidence using **Quantitative-Qualitative Alignment (QQA)** — all in a single command.
 
 ```bash
 synthesis "Does raising the minimum wage increase unemployment?"
 ```
 
-→ Generates an 8-section PhD-level research brief with interactive charts and a gap matrix in under 2 minutes.
+Generates an 8-section research brief with interactive charts, a forest plot, and a gap matrix in under 3 minutes.
 
 ---
 
 ## What It Produces
 
-- **Literature consensus** across 20+ papers with identified fault lines
-- **Extracted claims** structured by variable, direction, methodology, geography, and confidence
-- **Empirical data** from FRED (US macro) and World Bank (cross-country)
-- **QQA alignment scores** — each theoretical claim scored against empirical data
+- **Literature consensus** — pooled meta-analytic verdict across 20+ papers
+- **Structured claims** — each paper's finding as: `variable_a → variable_b | direction | methodology | geography | confidence | effect_size`
+- **Testability filter** — pre-screens claims against available data; only runs statistics on claims the data can actually test
+- **QQA alignment** — Spearman correlation + OLS on first differences, with p-values, for each testable claim
+- **Literature inventory** — untestable claims (wrong geography, sub-national scope, structural models) filed separately with explanation
+- **Forest plot** — citation-weighted effect sizes across studies
 - **Research gap matrix** — unstudied methodology × geography combinations
 - **Suggested research directions** with identification strategies
-- **Interactive HTML report** with Plotly charts (zoomable, hoverable)
+- **Interactive HTML report** with Plotly charts
 
 ---
 
 ## The Core Idea: QQA
 
-Most research tools do one of two things: search literature (qualitative) or fetch data (quantitative). **Synthesis does both and aligns them.**
+Most tools either search literature (qualitative) or fetch data (quantitative). Synthesis does both and aligns them.
 
-The Quantitative-Qualitative Alignment (QQA) method:
-1. Extracts structured claims from paper abstracts: `variable_a → variable_b | direction | methodology | geography | confidence`
-2. Fetches empirical data relevant to the question via Claude-identified FRED and World Bank series
-3. Scores each claim against the data: `strongly_supported / supported / neutral / contradicted / strongly_contradicted / insufficient_data`
-4. Identifies where the literature and data diverge — the most productive place for new research
+```
+Your question
+    │
+    ├── arXiv · OpenAlex · NBER  (20+ papers)
+    │          │
+    │    Claude extracts structured claims
+    │    (variable, direction, methodology, geography, effect_size)
+    │
+    ├── FRED · World Bank · BLS  (7–9 empirical series)
+    │
+    ▼
+Testability filter  ─── untestable claims → Literature Inventory
+    │
+    ▼
+Statistical QQA  (Spearman r + OLS on Δ, p-value thresholds)
+    │
+    ▼
+Forest plot + Gap matrix + 8-section research brief
+```
+
+The **testability filter** is the key architectural decision. Most economics claims are country-specific or sub-national — a study of New Jersey fast food workers, or a Hungarian natural experiment — and national aggregate data cannot test them. Rather than filling a report with meaningless "insufficient data" rows, Synthesis pre-screens each claim and routes untestable ones to a Literature Inventory section, reserving the statistical engine for claims it can actually evaluate.
 
 ---
 
@@ -42,17 +68,18 @@ The Quantitative-Qualitative Alignment (QQA) method:
 pip install synthesis-econ
 ```
 
-Set your API keys (get them free):
-- [Anthropic API key](https://console.anthropic.com/) — for Claude
-- [FRED API key](https://fred.stlouisfed.org/docs/api/api_key.html) — for US macro data
+Set your API keys (all free):
 
 ```bash
-export ANTHROPIC_API_KEY='sk-ant-...'
-export FRED_API_KEY='your-fred-key'
+export ANTHROPIC_API_KEY='sk-ant-...'   # console.anthropic.com
+export FRED_API_KEY='your-fred-key'     # fred.stlouisfed.org/docs/api/api_key.html
+export BLS_API_KEY='your-bls-key'       # data.bls.gov/registrationEngine (optional)
 ```
 
-Run a research brief:
+Run:
+
 ```bash
+synthesis "Does raising the minimum wage increase unemployment?"
 synthesis "Does immigration lower wages for native workers?"
 synthesis "What is the effect of quantitative easing on inflation?"
 synthesis "Do charter schools improve student outcomes?"
@@ -60,6 +87,55 @@ synthesis "Does foreign aid promote economic growth?"
 ```
 
 The HTML report opens automatically in your browser.
+
+---
+
+## Example Output
+
+**Question:** Does raising the minimum wage increase unemployment?
+
+**Retrieved:** 22 papers (arXiv: 8, OpenAlex: 8, NBER: 8) · **Claims:** 11 · **Testable:** 3 · **Effect sizes:** 8  
+**Data:** FRED (4) · World Bank (2) · BLS (3)  
+**Pooled verdict:** MIXED −0.18
+
+**Tested claims (statistical results):**
+
+| Claim | Verdict | Stats |
+|-------|---------|-------|
+| 138 state DiD → no employment loss | **SUPPORTED** | OLS slope −384, p=0.578, n=19 — cannot distinguish from zero |
+| Min wage → reduced job growth | **STRONGLY SUPPORTED** | Spearman r=−0.422, OLS slope=−5705, **p=0.036**, n=26 |
+| Min wage → teen unemployment (Mincer) | **STRONGLY SUPPORTED** | Spearman r=+0.299, OLS slope=+5.04, **p=0.032**, n=19 |
+
+**Literature inventory (8 claims):** Germany (DiD), NJ/PA fast food (Card-Krueger), Hungary, Western Europe, Spain, Bulgaria, global structural — not testable against US national data, recorded separately.
+
+> **Bottom line:** Aggregate employment levels show null effects. Employment *growth* slows significantly (p=0.036). Teen *unemployment* rises significantly (p=0.032). These are not contradictions — they measure different margins of the same phenomenon. The genuine empirical gap is that 8/11 claims span geographies the available data cannot test.
+
+---
+
+## Data Sources
+
+| Source | Coverage | Key Required |
+|--------|----------|-------------|
+| arXiv | Economics preprints (7 categories) | None |
+| OpenAlex | 250M+ peer-reviewed works | None |
+| NBER | 64K+ working papers | None |
+| FRED | 800K+ US macro time-series | Free |
+| World Bank | Cross-country development indicators | None |
+| BLS | Demographics, industry, hours, state series | Free (optional) |
+
+---
+
+## Options
+
+```
+synthesis "question" [OPTIONS]
+
+  -o, --output TEXT    Output directory  [default: ./synthesis_output]
+  -p, --papers INT     Max papers to retrieve  [default: 24]
+  --no-fred            Skip FRED data
+  --no-worldbank       Skip World Bank data
+  --no-bls             Skip BLS demographic/industry data
+```
 
 ---
 
@@ -73,99 +149,11 @@ pip install -e .
 
 ---
 
-## How It Works
+## Running the Demo Locally
 
-```
-Your question
-    │
-    ├── arXiv  (economics: econ.GN, econ.EM, econ.LG, econ.TH, econ.HE, econ.IO)
-    ├── OpenAlex  (250M+ peer-reviewed works)
-    └── NBER  (64K+ working papers)
-           │
-           ▼
-    Claude extracts structured claims
-    (variable_a → variable_b, direction, methodology, geography, confidence)
-           │
-           ├── FRED  (US macro time-series — series IDs chosen by Claude)
-           └── World Bank  (cross-country indicators — chosen by Claude)
-                  │
-                  ▼
-           QQA Alignment Scoring
-           (theory vs. data, claim by claim)
-                  │
-                  ▼
-           Research Gap Matrix
-           (unstudied methodology × geography combinations)
-                  │
-                  ▼
-    8-section research brief + interactive Plotly HTML report
-```
-
----
-
-## Example Output
-
-**Question:** Does raising the minimum wage increase unemployment?
-
-**Papers:** 22 (arXiv: 8, OpenAlex: 8, NBER: 8, 2 duplicates removed)  
-**Claims extracted:** 14  
-**FRED series:** Federal Minimum Wage, Unemployment Rate, Nonfarm Payrolls, Labor Force Participation  
-**World Bank series:** Unemployment total (% of labor force), Labor Force Participation  
-**Pooled estimate:** NEGATIVE −0.17 (weighted by method quality × confidence × citations)
-
-**Statistical QQA results (actual tests, not summaries):**
-- ΔSTTMINWGFG → ΔUNRATE: Spearman r=0.239, OLS slope=+2.29, **p=0.034** — significant but cycle-confounded
-- ΔSTTMINWGFG → ΔPAYEMS: Spearman r=−0.422, OLS slope=−5705, **p=0.036** — supports disemployment direction
-- Federal minimum frozen at $7.25 since 2009: CV of Δ=0.00031 → correctly flagged as **insufficient_variation**
-
-> **Verdict:** Directionally negative, small, margin-shifting, and badly under-identified at the level where policy actually binds. Adjustment runs through hours and slowed hiring, not stock job losses.
->
-> **Top gap:** Contiguous-county-pair DiD on the post-2009 real-minimum-wage decline — tests the inverse natural experiment (falling real floor) that no one has run.
-
----
-
-## Benchmark: Synthesis vs. Consensus
-
-Same question: *"Does raising the minimum wage increase unemployment?"*
-
-| | **Synthesis** | **Consensus** |
-|--|--|--|
-| Papers retrieved | 22 (3 sources, deduplicated) | 16 |
-| Verdict | NEGATIVE −0.17 (weighted pooled) | 56% No, 31% Yes |
-| Quantitative data | FRED + World Bank (6 series) | None |
-| Statistical tests | Spearman r, OLS slope, p-values | None |
-| Confound detection | Flagged business-cycle contamination | Not mentioned |
-| Research gap matrix | 8 unstudied method × geography cells | None |
-| Research directions | 5 with identification strategies | None |
-| Citation weighting | Yes (log-scaled by paper citations) | Unknown |
-
-**Consensus** is excellent for a quick literature read — intuitive verdict meter, clean country table, fast. Use it to find out *what* the literature says.
-
-**Synthesis** is for researchers who need to know *why* the data can or can't test a claim, *where* the gaps are, and *how* to close them. It is the only tool that aligns theoretical claims against real economic data with actual statistical tests.
-
----
-
-## Data Sources
-
-| Source | Coverage | Key |
-|--------|----------|-----|
-| arXiv | Economics preprints (7 categories) | None required |
-| OpenAlex | 250M+ peer-reviewed works | None required |
-| NBER | 64K+ working papers | None required |
-| FRED | 800K+ US macro time-series | Free API key |
-| World Bank | Cross-country development indicators | None required |
-
----
-
-## Options
-
-```
-synthesis "question" [OPTIONS]
-
-  -o, --output TEXT    Output directory  [default: ./synthesis_output]
-  -p, --papers INT     Max papers to retrieve  [default: 24]
-  --no-fred            Skip FRED data
-  --no-worldbank       Skip World Bank data
+```bash
+pip install streamlit
+streamlit run streamlit_app.py
 ```
 
 ---
@@ -173,14 +161,16 @@ synthesis "question" [OPTIONS]
 ## Requirements
 
 - Python 3.10+
-- Anthropic API key (uses Claude Opus 4.8 with adaptive thinking)
-- FRED API key (free, optional but strongly recommended)
+- Anthropic API key (Claude Opus 4.8 with adaptive thinking)
+- FRED API key (free — strongly recommended)
+- BLS API key (free — optional, unlocks demographic series back to 2005)
 
 ```
 anthropic>=0.109.0
 requests>=2.34.0
 pandas>=2.0.0
 plotly>=5.20.0
+scipy>=1.10.0
 rich>=13.0.0
 typer>=0.9.0
 python-dotenv>=1.0.0
@@ -190,24 +180,25 @@ python-dotenv>=1.0.0
 
 ## Roadmap
 
-- [x] arXiv + OpenAlex + NBER retrieval with deduplication (DOI + title)
-- [x] Claude-powered structured claim extraction (adaptive thinking, citations included)
-- [x] FRED + World Bank empirical data (series chosen by Claude)
-- [x] Statistical QQA — Spearman r + OLS on first differences, p-value thresholds, flat-series detection
-- [x] Citation-weighted meta-analytic pooling (method quality × confidence × log citations)
-- [x] Research gap matrix (unstudied methodology × geography combinations)
-- [x] Interactive Plotly HTML report with pooled evidence card
-- [x] Benchmark vs Consensus (see table above)
+- [x] arXiv + OpenAlex + NBER retrieval with deduplication
+- [x] Claude-powered structured claim extraction (adaptive thinking)
+- [x] FRED + World Bank + BLS empirical data
+- [x] Statistical QQA — Spearman r + OLS on first differences, flat-series detection
+- [x] Testability filter — pre-screens claims before running statistics
+- [x] Citation-weighted meta-analytic pooling
+- [x] Forest plot — effect sizes across studies
+- [x] arXiv HTML full-text extraction for effect size detection
+- [x] Research gap matrix
+- [x] Interactive Plotly HTML report
+- [x] Streamlit web demo
+- [ ] State-level minimum wage data (resolves NJ/PA and sub-national claims)
 - [ ] Confidence intervals on pooled score (bootstrap)
-- [ ] Semantic deduplication across sources (sentence-transformers)
-- [ ] PDF and LaTeX export
-- [ ] Jupyter notebook mode
+- [ ] arXiv methods note on QQA
+- [ ] PDF/LaTeX export
 
 ---
 
 ## Citation
-
-If you use Synthesis in your research:
 
 ```bibtex
 @software{sinclair2026synthesis,
@@ -222,9 +213,9 @@ If you use Synthesis in your research:
 
 ## Contributing
 
-Pull requests welcome. The highest-value open items are in the roadmap above.
+Pull requests welcome. Highest-value open items are in the roadmap above.
 
-To add a new data source, implement the pattern in `synthesis/data/` — a function `fetch_X(question: str, client: anthropic.Anthropic) -> list[DataSeries]` and wire it into `synthesis/cli.py`.
+To add a data source: implement `fetch_X(question: str, client: anthropic.Anthropic) -> list[DataSeries]` in `synthesis/data/` and wire it into `synthesis/cli.py`.
 
 ---
 

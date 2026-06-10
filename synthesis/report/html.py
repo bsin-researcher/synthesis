@@ -24,6 +24,7 @@ SUPPORT_COLORS = {
     "contradicted":           ORG,
     "strongly_contradicted":  RED,
     "insufficient_data":      MUTED,
+    "literature_only":        "#6e7681",
 }
 
 SUPPORT_LABELS = {
@@ -33,6 +34,7 @@ SUPPORT_LABELS = {
     "contradicted":          "Contradicted",
     "strongly_contradicted": "Strongly Contradicted",
     "insufficient_data":     "Insufficient Data",
+    "literature_only":       "Literature Only",
 }
 
 
@@ -215,8 +217,10 @@ def build_html(
     }}
     """
 
-    supported = sum(1 for r in alignment if r.support_score is not None and r.support_score > 0)
-    contradicted = sum(1 for r in alignment if r.support_score is not None and r.support_score < 0)
+    testable = [r for r in alignment if r.testability == "testable"]
+    literature_only = [r for r in alignment if r.testability == "untestable"]
+    supported = sum(1 for r in testable if r.support_score is not None and r.support_score > 0)
+    contradicted = sum(1 for r in testable if r.support_score is not None and r.support_score < 0)
     gaps = len(gap_matrix.get("unstudied_combinations", []))
 
     def md_to_html(text: str) -> str:
@@ -318,6 +322,7 @@ def build_html(
   <div class="stat"><div class="num" style="color:var(--green)">{supported}</div><div class="lab">Data-Supported</div></div>
   <div class="stat"><div class="num" style="color:var(--red)">{contradicted}</div><div class="lab">Contradicted by Data</div></div>
 </div>
+
 """
 
     # Pooled evidence card
@@ -367,27 +372,59 @@ def build_html(
     h += md_to_html(report_md)
     h += "</div></div>"
 
-    # QQA Alignment section
-    if alignment:
+    def _alignment_card(r: AlignmentResult) -> str:
+        color = SUPPORT_COLORS.get(r.support_level, MUTED)
+        label = SUPPORT_LABELS.get(r.support_level, r.support_level)
+        method_geo = f"{r.claim.methodology} · {r.claim.geography} · {r.claim.time_period}"
+        dir_color = GREEN if r.claim.direction == "positive" else (RED if r.claim.direction == "negative" else MUTED)
+        return (
+            f'<div class="alignment-card">'
+            f'<div>'
+            f'<span class="align-badge" style="background:{color}22;color:{color}">{label}</span>'
+            f'<div class="align-meta">{method_geo}</div>'
+            f'</div>'
+            f'<div>'
+            f'<div class="align-finding"><strong>{r.claim.variable_a} → {r.claim.variable_b}</strong>'
+            f' &nbsp;<span style="color:{dir_color}">({r.claim.direction})</span></div>'
+            f'<div class="align-explain">{r.claim.finding}</div>'
+            f'<div class="align-explain" style="margin-top:4px;color:{color}">↳ {r.explanation}</div>'
+            f'</div>'
+            f'</div>'
+        )
+
+    # QQA Alignment — testable claims (Theory vs. Data)
+    if testable:
         h += '<div class="section"><h2>QQA Alignment — Theory vs. Data</h2>'
+        h += (
+            '<p style="font-size:12px;margin-bottom:14px;">'
+            f'{len(testable)} claims tested against empirical data series. '
+            'Only claims whose geographic/sectoral scope matches available data are included here.'
+            '</p>'
+        )
         h += '<div class="alignment-grid">'
-        for r in alignment:
-            color = SUPPORT_COLORS.get(r.support_level, MUTED)
-            label = SUPPORT_LABELS.get(r.support_level, r.support_level)
-            method_geo = f"{r.claim.methodology} · {r.claim.geography} · {r.claim.time_period}"
-            dir_color = GREEN if r.claim.direction == "positive" else (RED if r.claim.direction == "negative" else MUTED)
-            h += f"""<div class="alignment-card">
-  <div>
-    <span class="align-badge" style="background:{color}22;color:{color}">{label}</span>
-    <div class="align-meta">{method_geo}</div>
-  </div>
-  <div>
-    <div class="align-finding"><strong>{r.claim.variable_a} → {r.claim.variable_b}</strong>
-     &nbsp;<span style="color:{dir_color}">({r.claim.direction})</span></div>
-    <div class="align-explain">{r.claim.finding}</div>
-    <div class="align-explain" style="margin-top:4px;color:{color}">↳ {r.explanation}</div>
-  </div>
-</div>"""
+        for r in testable:
+            h += _alignment_card(r)
+        h += "</div></div>"
+
+    # Literature Inventory — untestable claims
+    if literature_only:
+        lit_color = "#6e7681"
+        h += '<div class="section">'
+        h += (
+            f'<h2 style="color:{lit_color};border-bottom-color:{lit_color}44">'
+            f'Literature Inventory — {len(literature_only)} Claims Not Testable with Available Data'
+            f'</h2>'
+        )
+        h += (
+            '<p style="font-size:12px;margin-bottom:14px;">'
+            'These claims exist in the literature but require data unavailable at this '
+            'resolution — foreign country series, sub-national panels, or structural '
+            'model constructs. They are recorded for completeness, not tested statistically.'
+            '</p>'
+        )
+        h += '<div class="alignment-grid">'
+        for r in literature_only:
+            h += _alignment_card(r)
         h += "</div></div>"
 
     # Forest plot
@@ -424,7 +461,7 @@ def build_html(
         h += "</ul></div>"
 
     h += f"""<div class="footer">
-  <span>Synthesis v0.1.0 · claude-opus-4-8 · {source_line} · {data_source_line}</span>
+  <span>Synthesis v0.4.0 · claude-opus-4-8 · {source_line} · {data_source_line}</span>
   <span>For research purposes — verify all claims independently</span>
 </div>
 """

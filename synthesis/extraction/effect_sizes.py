@@ -36,12 +36,19 @@ def extract_effect_sizes(
     claims: list[Claim] | None = None,
 ) -> list[EffectSize]:
     """
-    If claims are provided, parse their effect_size strings into floats.
-    Otherwise, attempt extraction from raw paper abstracts.
+    Primary: parse Claim.effect_size strings (already extracted, most reliable).
+    Additional: scan full_text of arXiv papers whose HTML was fetched, adding
+    effect sizes not already covered by the claims-based pass.
+    Fallback: raw abstract scanning if no claims supplied.
     """
-    if claims:
-        return _from_claims(claims, client)
-    return _from_abstracts(papers, question, client)
+    primary = _from_claims(claims, client) if claims else _from_abstracts(papers, question, client)
+
+    full_text_extras = _from_full_text(papers, question, client)
+    if full_text_extras:
+        existing = {r.paper_title.lower() for r in primary}
+        primary += [r for r in full_text_extras if r.paper_title.lower() not in existing]
+
+    return primary
 
 
 def _from_claims(claims: list[Claim], client: anthropic.Anthropic) -> list[EffectSize]:
@@ -115,6 +122,76 @@ Return ONLY the JSON array."""
                 geography=c.geography,
             ))
         except (KeyError, ValueError, TypeError):
+            continue
+
+    return results
+
+
+def _from_full_text(
+    papers: list[Paper],
+    question: str,
+    client: anthropic.Anthropic,
+    max_papers: int = 6,
+) -> list[EffectSize]:
+    """
+    For arXiv papers whose full_text was fetched (HTML version), ask Claude to
+    find numerical estimates directly from the results section text.
+    Makes one API call per paper — capped at max_papers.
+    """
+    candidates = [p for p in papers if getattr(p, "full_text", "")][:max_papers]
+    if not candidates:
+        return []
+
+    results = []
+    for paper in candidates:
+        text_snippet = paper.full_text[:4000]
+        prompt = f"""Extract quantitative effect size estimates from this economics paper's results section.
+
+PAPER: {paper.title[:80]}
+QUESTION CONTEXT: {question}
+
+RESULTS TEXT:
+{text_snippet}
+
+Extract only EXPLICIT numerical estimates (regression coefficients, elasticities,
+percentage-point changes). Skip vague language ("significant", "positive effect").
+
+Return a JSON array ([] if none qualify):
+- estimate: float
+- lower_ci: float or null  (standard error or CI lower bound, negated if appropriate)
+- upper_ci: float or null
+- unit: what this number measures (≤60 chars)
+- methodology: DiD / IV / OLS / RCT / meta-analysis / other
+
+Return ONLY the JSON array."""
+
+        try:
+            resp = client.messages.create(
+                model="claude-opus-4-8",
+                max_tokens=512,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            raw = resp.content[0].text.strip()
+            if raw.startswith("```"):
+                raw = raw.split("```")[1]
+                if raw.startswith("json"):
+                    raw = raw[4:]
+            items = json.loads(raw.strip())
+            for item in items:
+                try:
+                    results.append(EffectSize(
+                        paper_title=paper.title[:45],
+                        estimate=float(item["estimate"]),
+                        lower_ci=float(item["lower_ci"]) if item.get("lower_ci") is not None else None,
+                        upper_ci=float(item["upper_ci"]) if item.get("upper_ci") is not None else None,
+                        unit=str(item.get("unit", "effect size"))[:80],
+                        citations=paper.citations,
+                        methodology=str(item.get("methodology", "unknown")),
+                        geography="unknown",
+                    ))
+                except (KeyError, ValueError, TypeError):
+                    continue
+        except Exception:
             continue
 
     return results

@@ -1,8 +1,8 @@
+import re
 import time
-import urllib.parse
 import requests
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 ARXIV_API = "https://export.arxiv.org/api/query"
@@ -17,6 +17,61 @@ class Paper:
     published: str
     source: str = "arxiv"
     citations: int = 0
+    full_text: str = ""  # populated by fetch_full_texts() after retrieval
+
+
+def _arxiv_id(url: str) -> str | None:
+    """Extract arXiv ID from https://arxiv.org/abs/XXXX.XXXXX"""
+    m = re.search(r"arxiv\.org/abs/([\d.v]+)", url)
+    return m.group(1) if m else None
+
+
+def _fetch_html_text(arxiv_id: str, max_chars: int = 6000) -> str:
+    """
+    Fetch the arXiv HTML paper version and extract results-section text.
+    Returns empty string if HTML version doesn't exist or fetch fails.
+    """
+    try:
+        resp = requests.get(
+            f"https://arxiv.org/html/{arxiv_id}",
+            timeout=12,
+            headers={"User-Agent": "Synthesis-Economics-Research/0.4.0"},
+        )
+        if resp.status_code != 200:
+            return ""
+        text = resp.text
+        # Strip scripts, styles, nav
+        text = re.sub(r"<(script|style|nav|header|footer)[^>]*>.*?</\1>", "", text, flags=re.DOTALL | re.IGNORECASE)
+        # Strip remaining tags
+        text = re.sub(r"<[^>]+>", " ", text)
+        # Collapse whitespace
+        text = re.sub(r"\s+", " ", text).strip()
+        # Try to start from the results/findings/empirical section
+        lower = text.lower()
+        for marker in ("results", "findings", "empirical evidence", "estimates", "conclusion"):
+            pos = lower.find(marker)
+            if pos > len(text) // 4:  # not in the very beginning (intro/abstract)
+                return text[pos: pos + max_chars]
+        # Fallback: middle third of document (usually methods + results)
+        mid = len(text) // 3
+        return text[mid: mid + max_chars]
+    except Exception:
+        return ""
+
+
+def fetch_full_texts(papers: list["Paper"]) -> None:
+    """
+    Populate paper.full_text for arXiv papers that have an HTML version.
+    Mutates in place. Skips non-arXiv papers and failed fetches silently.
+    """
+    for paper in papers:
+        if paper.source != "arxiv" or paper.full_text:
+            continue
+        arxiv_id = _arxiv_id(paper.url)
+        if not arxiv_id:
+            continue
+        paper.full_text = _fetch_html_text(arxiv_id)
+        time.sleep(0.3)  # polite rate-limit
 
 
 def _keywords(query: str) -> str:

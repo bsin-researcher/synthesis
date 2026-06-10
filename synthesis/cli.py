@@ -9,7 +9,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich import print as rprint
 from dotenv import load_dotenv
 
-from synthesis.retrieval import search_arxiv, search_openalex, search_nber, deduplicate
+from synthesis.retrieval import search_arxiv, fetch_full_texts, search_openalex, search_nber, deduplicate
 from synthesis.extraction import extract_claims, extract_effect_sizes
 from synthesis.data import FredClient, fetch_worldbank, fetch_bls
 from synthesis.alignment import score_alignment, pool_evidence
@@ -92,6 +92,19 @@ def research(
     if not all_papers:
         console.print("[red]No papers found. Try rephrasing your question.[/red]")
         raise typer.Exit(1)
+
+    # ── Step 1b: Fetch arXiv full text (HTML version) for effect size extraction
+    arxiv_count = len([p for p in all_papers if p.source == "arxiv"])
+    if arxiv_count:
+        with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"),
+                      console=console) as prog:
+            prog.add_task(f"Fetching full text for {arxiv_count} arXiv papers...", total=None)
+            fetch_full_texts(all_papers)
+        fetched = sum(1 for p in all_papers if getattr(p, "full_text", ""))
+        if fetched:
+            console.print(f"[green]✓[/green] Full text fetched for {fetched} arXiv papers")
+        else:
+            console.print("[dim]  arXiv HTML versions not available for this paper set[/dim]")
 
     # ── Step 2: Extract claims ────────────────────────────────────────────────
     with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"),

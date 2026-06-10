@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Synthesis — Does immigration lower wages for native workers?</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+<style>
+    :root {
+      --bg:#0d1117; --surf:#161b22; --bord:#30363d; --muted:#8b949e;
+      --text:#e6edf3; --blue:#58a6ff; --green:#3fb950; --red:#f85149; --org:#ffa657; --purp:#d2a8ff;
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { background:var(--bg); color:var(--text);
+           font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+           font-size:15px; line-height:1.7; padding-bottom:80px; }
+    .header { background:var(--surf); border-bottom:1px solid var(--bord);
+               padding:28px 48px; display:flex; justify-content:space-between; align-items:center; }
+    .header h1 { font-size:22px; font-weight:800; color:var(--blue); }
+    .header .meta { color:var(--muted); font-size:13px; text-align:right; line-height:1.9; }
+    .question-banner { max-width:1100px; margin:40px auto 0; padding:0 32px; }
+    .question-box { background:var(--surf); border:1px solid var(--bord);
+                     border-left:4px solid var(--blue); border-radius:8px;
+                     padding:20px 24px; }
+    .question-box .label { font-size:11px; color:var(--muted); text-transform:uppercase;
+                            letter-spacing:1px; margin-bottom:6px; }
+    .question-box .q { font-size:20px; font-weight:700; color:var(--text); }
+    .stats-row { max-width:1100px; margin:24px auto 0; padding:0 32px;
+                  display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+    .stat { background:var(--surf); border:1px solid var(--bord); border-radius:8px;
+             padding:18px 20px; text-align:center; }
+    .stat .num { font-size:32px; font-weight:800; color:var(--blue); }
+    .stat .lab { font-size:12px; color:var(--muted); margin-top:4px; }
+    .section { max-width:1100px; margin:40px auto 0; padding:0 32px; }
+    h2 { font-size:17px; font-weight:700; color:var(--blue); padding-bottom:10px;
+          border-bottom:1px solid var(--bord); margin-bottom:18px; }
+    h3 { font-size:14px; font-weight:600; color:var(--text); margin:16px 0 8px; }
+    p { color:var(--muted); margin-bottom:12px; }
+    ul { padding-left:20px; color:var(--muted); }
+    li { margin-bottom:6px; }
+    strong { color:var(--text); }
+    em { color:var(--muted); font-style:italic; }
+    .report-body h2 { font-size:17px; font-weight:700; color:var(--blue);
+                       padding-bottom:10px; border-bottom:1px solid var(--bord);
+                       margin:32px 0 16px; }
+    .report-body h3 { font-size:14px; font-weight:600; color:var(--text);
+                       margin:18px 0 8px; }
+    .report-body p { color:var(--muted); margin-bottom:12px; line-height:1.7; }
+    .report-body ul, .report-body ol { padding-left:22px; color:var(--muted);
+                                        margin-bottom:12px; }
+    .report-body li { margin-bottom:6px; }
+    .alignment-grid { display:grid; grid-template-columns:1fr; gap:10px; }
+    .alignment-card { background:var(--surf); border:1px solid var(--bord);
+                       border-radius:8px; padding:14px 18px;
+                       display:grid; grid-template-columns:auto 1fr; gap:0 16px; }
+    .align-badge { display:inline-block; padding:3px 10px; border-radius:4px;
+                    font-size:11px; font-weight:700; white-space:nowrap; }
+    .align-meta { font-size:12px; color:var(--muted); margin-top:4px; }
+    .align-finding { font-size:13.5px; color:var(--text); margin:6px 0 4px; }
+    .align-explain { font-size:12px; color:var(--muted); font-style:italic; }
+    .data-charts { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; }
+    .chart-card { background:var(--surf); border:1px solid var(--bord); border-radius:8px;
+                   padding:4px; }
+    .chart-badge { display:inline-block; padding:2px 8px; border-radius:4px;
+                    font-size:10px; font-weight:700; margin:6px 10px 2px;
+                    background:rgba(88,166,255,0.15); color:var(--blue); }
+    .chart-badge.wb  { background:rgba(210,168,255,0.15); color:var(--purp); }
+    .chart-badge.bls { background:rgba(255,166,87,0.15);  color:var(--org);  }
+    .chart-meta { padding:6px 12px 10px; font-size:12px; color:var(--muted); }
+    .gap-list { list-style:none; padding:0; }
+    .gap-list li { background:var(--surf); border:1px solid var(--bord);
+                    border-left:3px solid var(--org); border-radius:6px;
+                    padding:10px 14px; margin-bottom:8px; font-size:13px;
+                    color:var(--text); }
+    .pooled-card { max-width:1100px; margin:28px auto 0; padding:0 32px; }
+    .pooled-inner { border-radius:10px; padding:20px 24px;
+                     display:grid; grid-template-columns:auto 1fr; gap:0 24px;
+                     align-items:start; }
+    .pooled-direction { font-size:28px; font-weight:900; letter-spacing:-0.5px; }
+    .pooled-score { font-size:13px; color:var(--muted); margin-top:4px; }
+    .pooled-statement { font-size:14px; color:var(--text); line-height:1.6; }
+    .pooled-breakdown { display:flex; gap:16px; margin-top:10px; flex-wrap:wrap; }
+    .pooled-pill { font-size:11px; padding:3px 10px; border-radius:4px;
+                    font-weight:700; background:rgba(255,255,255,0.06); color:var(--muted); }
+    .effect-sizes { margin-top:10px; font-size:12px; color:var(--muted); }
+    .effect-sizes li { list-style:disc; margin-left:16px; margin-bottom:3px; }
+    .footer { max-width:1100px; margin:60px auto 0; padding:20px 32px 0;
+               border-top:1px solid var(--bord); color:var(--muted);
+               font-size:12px; display:flex; justify-content:space-between; }
+    @media(max-width:800px) {
+      .stats-row { grid-template-columns:repeat(2,1fr); }
+      .data-charts { grid-template-columns:1fr; }
+      .header { flex-direction:column; gap:10px; }
+    }
+    </style>
+</head>
+<body>
+<div class="header">
+  <div>
+    <h1>Synthesis · Economics Research Brief</h1>
+    <div style="color:var(--muted);font-size:13px;margin-top:4px;">
+      Qualitative · Quantitative · QQA Alignment
+    </div>
+  </div>
+  <div class="meta">
+    Model: claude-opus-4-8 · Adaptive Thinking<br>
+    Literature: arXiv · OpenAlex · NBER<br>
+    Data: FRED · World Bank · BLS &nbsp;·&nbsp; synthesis-econ v0.3.0
+  </div>
+</div>
+
+<div class="question-banner">
+  <div class="question-box">
+    <div class="label">Research Question</div>
+    <div class="q">Does immigration lower wages for native workers?</div>
+  </div>
+</div>
+
+<div class="stats-row">
+  <div class="stat"><div class="num">22</div><div class="lab">Papers Retrieved</div></div>
+  <div class="stat"><div class="num">19</div><div class="lab">Claims Extracted</div></div>
+  <div class="stat"><div class="num" style="color:var(--green)">0</div><div class="lab">Data-Supported</div></div>
+  <div class="stat"><div class="num" style="color:var(--red)">0</div><div class="lab">Contradicted by Data</div></div>
+</div>
+<div class="pooled-card"><div class="pooled-inner" style="background:rgba(255,166,87,0.1);border:1px solid #ffa65744;"><div><div class="pooled-direction" style="color:#ffa657">MIXED</div><div class="pooled-score">Weighted score: -0.12 &nbsp;·&nbsp; 19 claims &nbsp;·&nbsp; 7 high-confidence&nbsp;·&nbsp; Top methods: structural · IV · OLS</div></div><div><div class="pooled-statement">Evidence is MIXED across 19 claims via structural + IV + OLS (weighted score -0.12, 7 high-confidence findings). 4 positive vs 7 negative — genuine disagreement in the literature.</div><div class="pooled-breakdown"><span class="pooled-pill">▲ 4 positive</span><span class="pooled-pill">▼ 7 negative</span><span class="pooled-pill">— 2 no effect</span><span class="pooled-pill">~ 6 ambiguous</span></div><ul class="effect-sizes"><li>Scarce Workers, High Wages?… — elasticities of 0.004 to 0.011; explains 7-19% of real wage increase</li><li>The domestic economic impacts of immigra… — approximately zero average effect</li><li>How Much Does Immigration Boost Innovati… — 1pp immigrant share increase → 9-18% increase in patents per capita</li><li>Native Internal Migration and the Labor … — native migration attenuates local wage impact by 40-60%</li><li>Rethinking the Effects of Immigration on… — positive for average natives; small negative for no-high-school natives</li><li>Immigration and National Wages: Clarifyi… — short-run -0.4% average, -0.7% no-HS; long-run +0.6% average, +0.3% no-HS; -6% for prior immigrants</li></ul></div></div></div><div class="section"><div class="report-body"><h2>1. Research Question</h2>
+</ul><p></p>
+<p><strong>Does immigration lower wages for native workers?</strong> Specifically: what is the direction, magnitude, and distributional incidence of the effect of immigrant labor supply on the wages of native-born workers — distinguishing short-run from long-run, average from sub-group effects, and local from national identification?</p>
+</ul><p></p>
+<p>---</p>
+</ul><p></p>
+<h2>2. Literature Consensus</h2>
+</ul><p></p>
+<p>There is <strong>no clean consensus on direction</strong>, but there is a strong consensus on <strong>magnitude: effects are small</strong>. The pooled estimate (weighted score −0.12, "MIXED," 19 claims, 7 high-confidence) reflects genuine disagreement on sign but convergence on the conclusion that immigration's average wage effect on natives is <strong>near zero in the long run and modestly negative in the short run</strong>.</p>
+</ul><p></p>
+<p>The dominant view, supported by the highest-weight methods, has three pillars:</p>
+</ul><p></p>
+<p>1. <strong>Average long-run effect is approximately zero or slightly positive.</strong> The structural literature (Ottaviano-Peri-type models accounting for imperfect substitution between natives and immigrants and capital adjustment) finds <strong>+0.6% long-run average native wages, −0.4% short-run</strong>. A second structural finding reports a <strong>positive average effect</strong> outright. The meta-analytic conclusion that long-term average impacts are "probably zero at worst" reinforces this — economies absorb labor through capital deepening and immigrant consumption demand.</p>
+</ul><p></p>
+<p>2. <strong>Distributional incidence is real but concentrated.</strong> The losers are narrowly defined: <strong>native workers without a high-school degree</strong> (−0.7% short-run, +0.3% long-run) and, most sharply, <strong>prior immigrants</strong> (≈ −6%), who are the closest substitutes for new arrivals. The factor-proportions structural work confirms immigration widened educational wage differentials by depressing less-educated native wages.</p>
+</ul><p></p>
+<p>3. <strong>Mechanisms attenuate the negative shock.</strong> Task specialization (immigrants → manual jobs, natives → communication-intensive jobs), native internal out-migration (attenuates <em>measured local</em> effects by 40–60%), and innovation/productivity channels (1pp immigrant college-graduate share → 9–18% more patents per capita) all offset downward wage pressure.</p>
+</ul><p></p>
+<p><strong>Methodological backbone:</strong> structural general-equilibrium models, IV (including functional IV and tightness instruments), and OLS spatial-correlation studies, supplemented by natural experiments and meta-analyses.</p>
+</ul><p></p>
+<p>---</p>
+</ul><p></p>
+<h2>3. Where the Literature Disagrees</h2>
+</ul><p></p>
+<p>The disagreement is <strong>on sign for low-skilled natives and on the validity of spatial identification</strong> — not on average magnitude.</p>
+</ul><p></p>
+<p><strong>Fault line 1 — Local vs. national identification (the central methodological battle).</strong> OLS/natural-experiment studies exploit cross-area variation and typically find small or zero local effects. But the <strong>native out-migration finding (40–60% attenuation)</strong> implies local estimates are <em>biased toward zero</em> because the labor-supply shock diffuses spatially. Structural and factor-proportions approaches that estimate at the national level recover <strong>larger negative effects for substitutable groups</strong>. This is the Card (spatial) vs. Borjas (national skill-cell) divide in microcosm.</p>
+</ul><p></p>
+<p><strong>Fault line 2 — Sign for low-skilled natives.</strong> Contested:</p>
+<li>The structural search model for Italy: low-skilled immigration boosts GDP and high-skilled markets but is <strong>inconclusive</strong> for low-skilled native employees.</li>
+<li>One "other"-method US study argues immigration's effect on wage inequality and less-skilled men has been <strong>minor</strong>.</li>
+<li>Factor-proportions and natural-experiment work argue it is <strong>negative and meaningful</strong> for that group.</li>
+</ul><p></p>
+<p><strong>Fault line 3 — Explicitly contested claims.</strong> Two claims are flagged as actively contested:</p>
+<li>The <strong>functional IV methodological paper</strong> — its estimate is treated as illustration, not a settled magnitude.</li>
+<li>The <strong>"greasing the wheels"</strong> efficiency argument (immigration improves labor-market allocation via native mobility) — theoretically attractive but empirically unverified here.</li>
+</ul><p></p>
+<p><strong>Fault line 4 — Skill returns and downgrading.</strong> The German evidence (refugees downgrade more than economic immigrants, lower returns to identical skills) reframes the question: immigrant wage <em>losses</em> may absorb shocks that would otherwise hit natives — but this is untested against the wage-competition claims.</p>
+</ul><p></p>
+<p>---</p>
+</ul><p></p>
+<h2>4. What the Data Shows</h2>
+</ul><p></p>
+<p>The FRED/World Bank series describe the <strong>US labor-market environment</strong> but cannot directly identify a causal immigration→wage channel (no immigration-share series, no skill-cell wage decomposition). With that caveat:</p>
+</ul><p></p>
+<li><strong>Real wages rose, not fell.</strong> Median real weekly earnings (LES1252881600Q) sit at <strong>376</strong> (1982–84 $), near the top of the 329–393 range. Real wages trended <strong>up</strong> over the sample. Nominal average hourly earnings (CES0500000008) nearly doubled (15.9 → 30.66). This period coincided with sustained immigration — consistent with the "no aggregate wage suppression" view, <strong>inconsistent</strong> with a strong negative average effect.</li>
+</ul><p></p>
+<li><strong>Low-skill segment is tight, not slack.</strong> Unemployment for less-than-HS workers (LNS14032183) is at <strong>3.5%</strong>, near its historic low (range 2.0–15.0). Food-services hourly earnings (CES7072200008) rose from 8.26 to <strong>19.0</strong> — the <em>fastest-growing</em> low-wage series shown. This directly <strong>challenges</strong> the strong-version claim that immigration durably depresses low-skill native wages; the bottom of the distribution tightened and its wages rose.</li>
+</ul><p></p>
+<li><strong>Aggregate slack is low.</strong> Global/modeled unemployment at <strong>4.79%</strong> (bottom of its 4.79–6.59 range); nonfarm payrolls (PAYEMS) at an all-time high of 159,001k. Labor-force participation at <strong>61.8%</strong> is <em>below</em> its 67.3% peak — a structural decline, but driven by aging/demographics rather than wage competition.</li>
+</ul><p></p>
+<p><strong>Verdict from data:</strong> The macro time series are <strong>consistent with the dominant "small-to-zero average, tight low-wage market" view</strong> and <strong>inconsistent with the strong negative hypothesis</strong>. But these are aggregate trends confounded by the business cycle, monetary policy, and minimum-wage changes — they corroborate the <em>direction</em> of the consensus but cannot isolate the immigration coefficient. The short-run/sub-group negative effects in the structural literature (−0.4% to −0.7%) are too small to be visible in this data resolution.</p>
+</ul><p></p>
+<p>---</p>
+</ul><p></p>
+<h2>5. Theory vs. Data: The Alignment (QQA Summary)</h2>
+</ul><p></p>
+<p>| Claim | Confidence | Data verdict |</p>
+<p>|---|---|---|</p>
+<p>| Long-run average effect ≈ zero/slightly positive | High | <strong>Weakly supports</strong> — real wages rose alongside immigration; aggregate, not causal |</p>
+<p>| Structural: +0.6% long-run, −0.4% short-run average | High | <strong>Insufficient coverage</strong> — magnitudes below data resolution; no immigration series |</p>
+<p>| Low-skill natives lose; complements gain | Moderate | <strong>Challenges (weakly)</strong> — low-HS unemployment at 3.5%, food-service wages up sharply |</p>
+<p>| Labor-market tightness raises bottom wages | High | <strong>Supports (indirectly)</strong> — tight low-skill market + rising low-wage earnings consistent |</p>
+<p>| Native out-migration attenuates local effects 40–60% | High | <strong>Insufficient coverage</strong> — no internal-migration or local-wage panel |</p>
+<p>| Skilled immigration → 9–18% more patents | High | <strong>Insufficient coverage</strong> — no patent/innovation series provided |</p>
+<p>| Factor-proportions: widened educational wage gap | Moderate | <strong>Insufficient coverage</strong> — no skill-differentiated native wage decomposition |</p>
+<p>| Prior immigrants lose ≈6% | High | <strong>Insufficient coverage</strong> — no immigrant-vintage wage series |</p>
+<p>| Skill downgrading (refugees > economic migrants), Germany | Moderate | <strong>Insufficient coverage</strong> — no German/skill-return data |</p>
+<p>| Wage-inequality impact "minor" | Moderate | <strong>Weakly supports</strong> — no widening visible at the bottom in these series |</p>
+<p>| "Greasing the wheels" efficiency | Low | <strong>Insufficient coverage</strong> — untestable here |</p>
+</ul><p></p>
+<p><strong>Blunt summary:</strong> Of 19 claims, <strong>0 are directly testable</strong> with the supplied series — every QQA alignment returns INSUFFICIENT_DATA at the claim level. The macro data offer only <em>circumstantial corroboration</em> of the aggregate consensus (no wage collapse, tight low-skill market) and <em>circumstantial tension</em> with the strong negative-incidence claim. <strong>The empirical infrastructure provided cannot adjudicate the central scientific dispute</strong> because it lacks an immigration-intensity variable and skill-cell/vintage wage breakdowns. This is the brief's most important finding.</p>
+</ul><p></p>
+<p>---</p>
+</ul><p></p>
+<h2>6. Research Gaps (The Gap Matrix)</h2>
+</ul><p></p>
+<p><strong>Method × Geography gaps (explicit):</strong></p>
+<li><strong>No OLS</strong> studies for Canada, Italy, OECD, Germany, wealthy countries, or the US/Canada/W. Europe pool — OLS spatial-correlation designs are nearly US-monopolized.</li>
+<li><strong>No Difference-in-Differences</strong> for the <strong>United States or Canada</strong> — striking, given DiD is the natural design for discrete immigration shocks (e.g., visa-lottery, refugee-resettlement, border-policy changes).</li>
+</ul><p></p>
+<p><strong>Method × Outcome gaps:</strong></p>
+<li>Prior-immigrant wage effects (the largest estimated effect, ≈ −6%) rest on a single structural study — <strong>no quasi-experimental replication</strong>.</li>
+<li>Skill-downgrading/returns evidence exists only for Germany ("other" method) — <strong>no causal design</strong>.</li>
+</ul><p></p>
+<p><strong>Data-infrastructure gap:</strong></p>
+<li>No linked dataset here pairs <strong>local immigration intensity</strong> with <strong>skill-disaggregated native wages and native out-migration</strong> — precisely the combination needed to reconcile the local-vs-national fault line.</li>
+</ul><p></p>
+<p><strong>Temporal gap:</strong></p>
+<li>Short-run/long-run distinction is asserted by structural models but <strong>not identified by any long-horizon panel design</strong> in the claim set.</li>
+</ul><p></p>
+<p>---</p>
+</ul><p></p>
+<h2>7. Suggested Research Directions</h2>
+</ul><p></p>
+<p>1. <strong>DiD on a US immigration shock (closes the no-DiD-US gap).</strong></p>
+<p>   <em>Approach:</em> Difference-in-differences exploiting the geographic dispersion of a discrete shock (e.g., refugee resettlement quotas, H-1B cap changes, or DACA eligibility) across commuting zones.</p>
+<p>   <em>Identification:</em> Treatment = pre-policy settlement networks predicting placement (shift-share/Bartik instrument); control = ex-ante similar zones with low exposure.</p>
+<p>   <em>Why:</em> DiD on the US is entirely absent. It would directly test the short-run negative claims (−0.4% / −0.7%) at a credible causal standard the structural models cannot provide.</p>
+</ul><p></p>
+<p>2. <strong>Jointly estimate the spatial-attenuation parameter (resolves Fault Line 1).</strong></p>
+<p>   <em>Approach:</em> Panel model with immigration intensity, native out-migration, <em>and</em> skill-cell wages estimated simultaneously.</p>
+<p>   <em>Identification:</em> Instrument immigration with origin-push × historical-network shift-share; instrument native mobility with housing-supply elasticity.</p>
+<p>   <em>Why:</em> The 40–60% attenuation finding is the single biggest reason local and national estimates diverge. Recovering it structurally would reconcile Card vs. Borjas rather than re-litigate them.</p>
+</ul><p></p>
+<p>3. <strong>Prior-immigrant wage incidence, quasi-experimentally (replicates the −6% claim).</strong></p>
+<p>   <em>Approach:</em> Event-study on existing-immigrant cohorts following a new immigration wave to their metro area.</p>
+<p>   <em>Identification:</em> Stacked event-study around enclave-targeted inflows.</p>
+<p>   <em>Why:</em> The largest estimated effect in the entire literature rests on one structural paper. If real, it relocates the policy debate from "natives vs. immigrants" to "incumbent vs. new immigrants."</p>
+</ul><p></p>
+<p>4. <strong>OLS/DiD skill-downgrading study outside Germany (closes geography gap).</strong></p>
+<p>   <em>Approach:</em> Replicate the refugee-vs-economic-migrant skill-return gap in Canada (rich admin/landing data) or the US.</p>
+<p>   <em>Identification:</em> Compare returns to identical measured skills across admission categories using linked employer-employee data.</p>
+<p>   <em>Why:</em> The downgrading channel may explain <em>why</em> native effects are small (immigrants absorb the loss) — currently a single-country, single-method result.</p>
+</ul><p></p>
+<p>5. <strong>Build the missing linked dataset, then run a horse race.</strong></p>
+<p>   <em>Approach:</em> Construct a public panel pairing CZ-level immigration intensity, skill-disaggregated native AND immigrant-vintage wages, and net native migration.</p>
+<p>   <em>Why:</em> Every QQA alignment above failed for lack of data. The highest-leverage contribution may be infrastructural, enabling all of the above.</p>
+</ul><p></p>
+<p>---</p>
+</ul><p></p>
+<h2>8. One-Paragraph Research Memo</h2>
+</ul><p></p>
+<p>The literature has effectively settled that immigration's <strong>average</strong> effect on native wages is small — near zero or slightly positive in the long run, modestly negative in the short run — with the convincing structural evidence (+0.6% long-run, −0.4% short-run) and supportive US macro data (real median wages near series highs, sub-3.5% unemployment among less-than-HS workers, rapidly rising low-wage earnings) both pointing away from broad wage suppression. The live disputes are <strong>distributional and methodological</strong>: whether low-skilled and incumbent-immigrant workers bear concentrated losses (the −6% prior-immigrant estimate and the −0.7% no-HS estimate rest on thin, single-source structural foundations), and whether local-area designs systematically understate effects because native out-migration dilutes the shock by 40–60%. The decisive empirical gap is the <strong>complete absence of difference-in-differences designs for the US and Canada</strong> and the lack of any dataset linking local immigration intensity to skill- and vintage-disaggregated wages plus native mobility — none of the 19 claims could be tested against the available data. The most promising next study is a <strong>US difference-in-differences exploiting a discrete, geographically dispersed immigration shock (refugee quotas or visa-cap changes) with a shift-share instrument</strong>, designed to jointly recover the native out-migration attenuation parameter — this single design would simultaneously close the most glaring method gap and adjudicate the local-vs-national identification dispute that currently drives the field's disagreement.</p></div></div><div class="section"><h2>QQA Alignment — Theory vs. Data</h2><div class="alignment-grid"><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">IV · United States · unclear</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>immigration → native wages</strong>
+     &nbsp;<span style="color:#8b949e">(ambiguous)</span></div>
+    <div class="align-explain">The paper develops functional IV estimators and applies them to estimate the impact of immigration on native wages, primarily as a methodological illustration.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ No matching data series was available to test this functional IV estimate of immigration's effect on native wages, so the ambiguous methodological finding cannot be statistically corroborated here.</div>
+  </div>
+</div><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">other · Germany · 1984-2018</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>immigrant status (refugee vs economic) → wage returns to skills</strong>
+     &nbsp;<span style="color:#f85149">(negative)</span></div>
+    <div class="align-explain">Immigrants experience skill downgrading and receive lower wage returns to the same skills compared to natives, with refugees downgrading more than economic immigrants.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ No data series matched the claim that refugees and economic immigrants face skill downgrading and lower wage returns, so this negative-returns finding remains untested by our statistics.</div>
+  </div>
+</div><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">IV · Germany · 2012-2022</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>labor market tightness (scarce workers) → wages</strong>
+     &nbsp;<span style="color:#3fb950">(positive)</span></div>
+    <div class="align-explain">Higher labor market tightness raises wages, especially at the bottom of the wage distribution, suggesting labor scarcity (the opposite of labor supply increases like immigration) raises wages.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ No matching data was available to verify the IV-based positive link between labor market tightness and wages, so the claimed scarcity-raises-wages effect cannot be quantified here.</div>
+  </div>
+</div><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">meta-analysis · wealthy countries · long-run</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>immigration → average native wages</strong>
+     &nbsp;<span style="color:#8b949e">(no_effect)</span></div>
+    <div class="align-explain">Long-term average impacts of immigration on native wages are probably zero at worst, as economies absorb migrants quickly through capital mobility and immigrant consumption.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ No data series matched this meta-analytic conclusion that long-run average wage effects are roughly zero, so the no-effect verdict cannot be independently confirmed with numbers.</div>
+  </div>
+</div><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">meta-analysis · wealthy countries · long-run</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>low-skill immigration → wages of similar low-skill native workers</strong>
+     &nbsp;<span style="color:#f85149">(negative)</span></div>
+    <div class="align-explain">Low-skill native workers most resembling new arrivals stand to lose, while native workers complementary to immigrants tend to benefit.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ No matching data was available to test the meta-analytic finding that low-skill natives lose while complementary natives gain, leaving this distributional claim unverified.</div>
+  </div>
+</div><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">structural · Italy · unclear</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>low-skilled immigration → low-skilled native wages</strong>
+     &nbsp;<span style="color:#8b949e">(ambiguous)</span></div>
+    <div class="align-explain">In a general equilibrium search model, low-skilled immigration boosts GDP and benefits high-skilled markets, but effects on low-skilled native employees are inconclusive.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ No data series matched the structural search model's inconclusive result for low-skilled native wages, so its ambiguous prediction cannot be statistically evaluated here.</div>
+  </div>
+</div><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">other · Canada · recent</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>immigrant arrival location → immigrant earnings</strong>
+     &nbsp;<span style="color:#3fb950">(positive)</span></div>
+    <div class="align-explain">An immigrant's initial arrival location strongly shapes economic success, and data-driven location recommendations can increase their initial earnings.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ No matching data was available to assess how initial arrival location shapes immigrant earnings, so this positive placement effect remains untested by our series.</div>
+  </div>
+</div><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">OLS · United States · unclear</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>immigration and task specialization → wages of less-educated native workers</strong>
+     &nbsp;<span style="color:#f85149">(negative)</span></div>
+    <div class="align-explain">Task specialization where immigrants take manual jobs and natives take communication-intensive jobs reduces downward wage pressure, explaining modest wage consequences of immigration for less-educated natives.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ No data series matched the OLS task-specialization mechanism, so the claimed modest negative wage pressure on less-educated natives cannot be quantified here.</div>
+  </div>
+</div><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">survey · US, Canada, Western Europe · unclear</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>personal economic circumstances / labor market competition → immigration attitudes</strong>
+     &nbsp;<span style="color:#8b949e">(no_effect)</span></div>
+    <div class="align-explain">Immigration attitudes show little correlation with personal economic circumstances, indirectly suggesting limited perceived wage competition effects.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ No matching survey data was available to test the near-zero correlation between personal economic circumstances and immigration attitudes, so this no-effect finding cannot be confirmed.</div>
+  </div>
+</div><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">structural · United States · 1980s-1990s</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>immigration → native wages and wage differentials</strong>
+     &nbsp;<span style="color:#f85149">(negative)</span></div>
+    <div class="align-explain">Using a factor proportions approach, immigration contributed to widening educational wage differentials by lowering wages of less-educated native workers.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ No data series matched the factor-proportions structural estimate linking immigration to widening educational wage gaps, so this negative effect remains untested here.</div>
+  </div>
+</div><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">IV · United States · 1940-2000</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>skilled immigration → innovation/patents</strong>
+     &nbsp;<span style="color:#3fb950">(positive)</span></div>
+    <div class="align-explain">A 1 percentage point increase in immigrant college graduates' population share increases patents per capita by 9-18 percent, a mechanism that can boost productivity and wages.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ No matching data was available to verify the IV estimate that a 1-point rise in immigrant college-graduate share boosts patents per capita by 9–18 percent, so this innovation channel is unconfirmed.</div>
+  </div>
+</div><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">OLS · United States · 1960-2000</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>immigration → measured local wage impact (via native out-migration)</strong>
+     &nbsp;<span style="color:#f85149">(negative)</span></div>
+    <div class="align-explain">Native internal migration in response to immigration attenuates the measured local wage impact of immigration by 40 to 60 percent, implying larger true wage effects at the national level.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ No data series matched the OLS finding that native out-migration attenuates measured local wage impacts by 40–60 percent, so this spatial-dilution effect cannot be quantified here.</div>
+  </div>
+</div><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">theoretical · United States · unclear</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>immigration → native labor mobility and labor market efficiency</strong>
+     &nbsp;<span style="color:#8b949e">(ambiguous)</span></div>
+    <div class="align-explain">Immigration affects labor market equilibrium and native labor flows, potentially greasing the wheels of the labor market by improving efficiency.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ No matching data was available to test the theoretical 'greasing the wheels' efficiency argument, so this ambiguous claim about native labor mobility remains unverified.</div>
+  </div>
+</div><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">natural_experiment · United States · 1990s (Mexican Peso Crisis)</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>low-skilled immigration → native low-skilled wages</strong>
+     &nbsp;<span style="color:#f85149">(negative)</span></div>
+    <div class="align-explain">In the short run, high-immigration locations see native low-skilled wages decrease, though internal relocation dissipates the shock spatially over the long run.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ No data series matched the natural-experiment evidence of short-run low-skilled native wage declines that dissipate via relocation, so this negative effect cannot be statistically confirmed.</div>
+  </div>
+</div><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">meta-analysis · United States · historical and contemporary</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>immigration → native wages</strong>
+     &nbsp;<span style="color:#8b949e">(ambiguous)</span></div>
+    <div class="align-explain">Reviewing historical and contemporary evidence, the effect of immigration on native wages is debated but generally modest.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ No matching data was available to evaluate this meta-analytic conclusion that wage effects are debated but modest, leaving the ambiguous verdict untested.</div>
+  </div>
+</div><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">structural · United States · 1990-2004</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>immigration → average native wages</strong>
+     &nbsp;<span style="color:#3fb950">(positive)</span></div>
+    <div class="align-explain">Accounting for imperfect substitution and capital adjustment, immigration had a positive effect on average native wages, with a positive effect on those with at least high school and a small negative effect on those without a high school degree.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ No data series matched the structural finding of positive average native wage effects (with small negatives for no-high-school natives), so this result cannot be independently quantified.</div>
+  </div>
+</div><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">structural · United States · 1990-2006</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>immigration → native wages</strong>
+     &nbsp;<span style="color:#8b949e">(ambiguous)</span></div>
+    <div class="align-explain">Immigration had small negative short-run effects on average native wages (-0.4%) and on no-high-school natives (-0.7%) but small positive long-run effects (+0.6% average, +0.3% for no-high-school), while reducing previous immigrants' wages by about 6%.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ No matching data was available to test the structural estimates of small short-run wage declines (−0.4% average, −0.7% no-high-school) and positive long-run effects (+0.6%), so these magnitudes remain unverified.</div>
+  </div>
+</div><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">meta-analysis · OECD · unclear</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>immigration → native labor market outcomes</strong>
+     &nbsp;<span style="color:#8b949e">(ambiguous)</span></div>
+    <div class="align-explain">Surveying empirical studies, the assimilation of immigrants into host-country labor markets has concomitant but generally modest effects on natives.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ No data series matched the meta-analytic conclusion that immigrant assimilation has modest effects on natives, so this ambiguous finding cannot be statistically confirmed.</div>
+  </div>
+</div><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">other · United States · unclear</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>immigration → wage inequality / wages of less-skilled men</strong>
+     &nbsp;<span style="color:#f85149">(negative)</span></div>
+    <div class="align-explain">Increased immigration is alleged to reduce wages of less-skilled men, but the author finds immigration's impact on wage inequality has been minor.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ No matching data was available to test the claim that immigration's impact on wage inequality and less-skilled men's wages has been minor, so this finding remains untested here.</div>
+  </div>
+</div></div></div><div class="section"><h2>Forest Plot — Effect Sizes Across Studies</h2><p style="font-size:12px;margin-bottom:12px;">Squares = individual study estimates (size ∝ citations). <span style="color:#3fb950">Green</span> = CI excludes zero positively. <span style="color:#f85149">Red</span> = CI excludes zero negatively. Gray = CI crosses zero or not reported. ◆ Diamond = citation-weighted pooled estimate.</p><div class="chart-card" style="padding:4px"><div id="chart_forest" style="width:100%;border-radius:8px;overflow:hidden"></div></div></div><div class="section"><h2>Empirical Data — FRED · World Bank · BLS</h2><div class="data-charts"><div class="chart-card"><span class="chart-badge">FRED</span><div id="chart_0" style="width:100%;border-radius:8px;overflow:hidden"></div><div class="chart-meta">LES1252881600Q &nbsp;·&nbsp; Latest: <strong>376.0 1982-84 CPI Adjusted $</strong> &nbsp;·&nbsp; 2000–2026</div></div>
+<div class="chart-card"><span class="chart-badge">FRED</span><div id="chart_1" style="width:100%;border-radius:8px;overflow:hidden"></div><div class="chart-meta">CIVPART &nbsp;·&nbsp; Latest: <strong>61.8 %</strong> &nbsp;·&nbsp; 2000–2026</div></div>
+<div class="chart-card"><span class="chart-badge">FRED</span><div id="chart_2" style="width:100%;border-radius:8px;overflow:hidden"></div><div class="chart-meta">PAYEMS &nbsp;·&nbsp; Latest: <strong>159001.0 Thous. of Persons</strong> &nbsp;·&nbsp; 2000–2026</div></div>
+<div class="chart-card"><span class="chart-badge wb">World Bank</span><div id="chart_3" style="width:100%;border-radius:8px;overflow:hidden"></div><div class="chart-meta">WB:SL.UEM.TOTL.ZS &nbsp;·&nbsp; Latest: <strong>4.791 %</strong> &nbsp;·&nbsp; 2006–2025</div></div>
+<div class="chart-card"><span class="chart-badge wb">World Bank</span><div id="chart_4" style="width:100%;border-radius:8px;overflow:hidden"></div><div class="chart-meta">WB:NY.GDP.PCAP.CD &nbsp;·&nbsp; Latest: <strong>13631.204 %</strong> &nbsp;·&nbsp; 2005–2024</div></div>
+<div class="chart-card"><span class="chart-badge bls">BLS</span><div id="chart_5" style="width:100%;border-radius:8px;overflow:hidden"></div><div class="chart-meta">BLS:CES0500000008 &nbsp;·&nbsp; Latest: <strong>30.66 $/hour</strong> &nbsp;·&nbsp; 2005–2024</div></div>
+<div class="chart-card"><span class="chart-badge bls">BLS</span><div id="chart_6" style="width:100%;border-radius:8px;overflow:hidden"></div><div class="chart-meta">BLS:LNS14032183 &nbsp;·&nbsp; Latest: <strong>3.5 percent</strong> &nbsp;·&nbsp; 2005–2024</div></div>
+<div class="chart-card"><span class="chart-badge bls">BLS</span><div id="chart_7" style="width:100%;border-radius:8px;overflow:hidden"></div><div class="chart-meta">BLS:CES7072200008 &nbsp;·&nbsp; Latest: <strong>19.0 $/hour</strong> &nbsp;·&nbsp; 2005–2024</div></div></div></div><div class="section"><h2>Research Gap Matrix</h2><ul class="gap-list"><li>No OLS study found for Canada</li><li>No OLS study found for Italy</li><li>No OLS study found for OECD</li><li>No OLS study found for US, Canada, Western Europe</li><li>No OLS study found for Germany</li><li>No OLS study found for wealthy countries</li><li>No DiD study found for United States</li><li>No DiD study found for Canada</li></ul></div><div class="footer">
+  <span>Synthesis v0.1.0 · claude-opus-4-8 · arXiv · OpenAlex · NBER · FRED · World Bank · BLS</span>
+  <span>For research purposes — verify all claims independently</span>
+</div>
+<script>
+Plotly.newPlot("chart_0",[{"x": ["2000-01-01", "2000-04-01", "2000-07-01", "2000-10-01", "2001-01-01", "2001-04-01", "2001-07-01", "2001-10-01", "2002-01-01", "2002-04-01", "2002-07-01", "2002-10-01", "2003-01-01", "2003-04-01", "2003-07-01", "2003-10-01", "2004-01-01", "2004-04-01", "2004-07-01", "2004-10-01", "2005-01-01", "2005-04-01", "2005-07-01", "2005-10-01", "2006-01-01", "2006-04-01", "2006-07-01", "2006-10-01", "2007-01-01", "2007-04-01", "2007-07-01", "2007-10-01", "2008-01-01", "2008-04-01", "2008-07-01", "2008-10-01", "2009-01-01", "2009-04-01", "2009-07-01", "2009-10-01", "2010-01-01", "2010-04-01", "2010-07-01", "2010-10-01", "2011-01-01", "2011-04-01", "2011-07-01", "2011-10-01", "2012-01-01", "2012-04-01", "2012-07-01", "2012-10-01", "2013-01-01", "2013-04-01", "2013-07-01", "2013-10-01", "2014-01-01", "2014-04-01", "2014-07-01", "2014-10-01", "2015-01-01", "2015-04-01", "2015-07-01", "2015-10-01", "2016-01-01", "2016-04-01", "2016-07-01", "2016-10-01", "2017-01-01", "2017-04-01", "2017-07-01", "2017-10-01", "2018-01-01", "2018-04-01", "2018-07-01", "2018-10-01", "2019-01-01", "2019-04-01", "2019-07-01", "2019-10-01", "2020-01-01", "2020-04-01", "2020-07-01", "2020-10-01", "2021-01-01", "2021-04-01", "2021-07-01", "2021-10-01", "2022-01-01", "2022-04-01", "2022-07-01", "2022-10-01", "2023-01-01", "2023-04-01", "2023-07-01", "2023-10-01", "2024-01-01", "2024-04-01", "2024-07-01", "2024-10-01", "2025-01-01", "2025-04-01", "2025-07-01", "2026-01-01"], "y": [334.0, 334.0, 335.0, 334.0, 333.0, 336.0, 338.0, 340.0, 341.0, 339.0, 337.0, 336.0, 335.0, 338.0, 337.0, 337.0, 337.0, 341.0, 335.0, 337.0, 336.0, 334.0, 331.0, 332.0, 332.0, 329.0, 334.0, 337.0, 336.0, 335.0, 336.0, 332.0, 335.0, 335.0, 331.0, 340.0, 345.0, 345.0, 345.0, 344.0, 344.0, 342.0, 342.0, 341.0, 338.0, 336.0, 336.0, 335.0, 335.0, 337.0, 333.0, 333.0, 331.0, 335.0, 334.0, 334.0, 335.0, 330.0, 336.0, 336.0, 341.0, 339.0, 340.0, 345.0, 346.0, 345.0, 347.0, 349.0, 352.0, 354.0, 352.0, 345.0, 351.0, 351.0, 354.0, 355.0, 355.0, 358.0, 360.0, 362.0, 367.0, 393.0, 384.0, 376.0, 373.0, 371.0, 367.0, 361.0, 363.0, 359.0, 362.0, 362.0, 364.0, 365.0, 366.0, 369.0, 365.0, 368.0, 371.0, 374.0, 373.0, 376.0, 376.0, 376.0], "type": "scatter", "mode": "lines", "fill": "tozeroy", "fillcolor": "rgba(88,166,255,0.08)", "line": {"color": "#58a6ff", "width": 1.8}, "hovertemplate": "%{x}<br>1982-84 CPI Adjusted $: %{y:.3f}<extra></extra>", "name": "LES1252881600Q"}],{"paper_bgcolor": "#161b22", "plot_bgcolor": "#161b22", "font": {"color": "#8b949e", "size": 11, "family": "-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif"}, "title": {"text": "Employed full time: Median usual weekly real earnings: Wage and salary workers: 16 years and over", "font": {"color": "#e6edf3", "size": 12}, "x": 0.02, "xanchor": "left"}, "xaxis": {"gridcolor": "#30363d", "showgrid": true, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "yaxis": {"gridcolor": "#30363d", "showgrid": true, "title": {"text": "1982-84 CPI Adjusted $", "font": {"size": 10}}, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "margin": {"t": 50, "b": 40, "l": 60, "r": 16}, "height": 260, "hovermode": "x unified", "hoverlabel": {"bgcolor": "#0d1117", "bordercolor": "#30363d", "font": {"color": "#e6edf3", "size": 11}}},{"responsive": true, "displayModeBar": false});
+Plotly.newPlot("chart_1",[{"x": ["2000-01-01", "2000-02-01", "2000-03-01", "2000-04-01", "2000-05-01", "2000-06-01", "2000-07-01", "2000-08-01", "2000-09-01", "2000-10-01", "2000-11-01", "2000-12-01", "2001-01-01", "2001-02-01", "2001-03-01", "2001-04-01", "2001-05-01", "2001-06-01", "2001-07-01", "2001-08-01", "2001-09-01", "2001-10-01", "2001-11-01", "2001-12-01", "2002-01-01", "2002-02-01", "2002-03-01", "2002-04-01", "2002-05-01", "2002-06-01", "2002-07-01", "2002-08-01", "2002-09-01", "2002-10-01", "2002-11-01", "2002-12-01", "2003-01-01", "2003-02-01", "2003-03-01", "2003-04-01", "2003-05-01", "2003-06-01", "2003-07-01", "2003-08-01", "2003-09-01", "2003-10-01", "2003-11-01", "2003-12-01", "2004-01-01", "2004-02-01", "2004-03-01", "2004-04-01", "2004-05-01", "2004-06-01", "2004-07-01", "2004-08-01", "2004-09-01", "2004-10-01", "2004-11-01", "2004-12-01", "2005-01-01", "2005-02-01", "2005-03-01", "2005-04-01", "2005-05-01", "2005-06-01", "2005-07-01", "2005-08-01", "2005-09-01", "2005-10-01", "2005-11-01", "2005-12-01", "2006-01-01", "2006-02-01", "2006-03-01", "2006-04-01", "2006-05-01", "2006-06-01", "2006-07-01", "2006-08-01", "2006-09-01", "2006-10-01", "2006-11-01", "2006-12-01", "2007-01-01", "2007-02-01", "2007-03-01", "2007-04-01", "2007-05-01", "2007-06-01", "2007-07-01", "2007-08-01", "2007-09-01", "2007-10-01", "2007-11-01", "2007-12-01", "2008-01-01", "2008-02-01", "2008-03-01", "2008-04-01", "2008-05-01", "2008-06-01", "2008-07-01", "2008-08-01", "2008-09-01", "2008-10-01", "2008-11-01", "2008-12-01", "2009-01-01", "2009-02-01", "2009-03-01", "2009-04-01", "2009-05-01", "2009-06-01", "2009-07-01", "2009-08-01", "2009-09-01", "2009-10-01", "2009-11-01", "2009-12-01", "2010-01-01", "2010-02-01", "2010-03-01", "2010-04-01", "2010-05-01", "2010-06-01", "2010-07-01", "2010-08-01", "2010-09-01", "2010-10-01", "2010-11-01", "2010-12-01", "2011-01-01", "2011-02-01", "2011-03-01", "2011-04-01", "2011-05-01", "2011-06-01", "2011-07-01", "2011-08-01", "2011-09-01", "2011-10-01", "2011-11-01", "2011-12-01", "2012-01-01", "2012-02-01", "2012-03-01", "2012-04-01", "2012-05-01", "2012-06-01", "2012-07-01", "2012-08-01", "2012-09-01", "2012-10-01", "2012-11-01", "2012-12-01", "2013-01-01", "2013-02-01", "2013-03-01", "2013-04-01", "2013-05-01", "2013-06-01", "2013-07-01", "2013-08-01", "2013-09-01", "2013-10-01", "2013-11-01", "2013-12-01", "2014-01-01", "2014-02-01", "2014-03-01", "2014-04-01", "2014-05-01", "2014-06-01", "2014-07-01", "2014-08-01", "2014-09-01", "2014-10-01", "2014-11-01", "2014-12-01", "2015-01-01", "2015-02-01", "2015-03-01", "2015-04-01", "2015-05-01", "2015-06-01", "2015-07-01", "2015-08-01", "2015-09-01", "2015-10-01", "2015-11-01", "2015-12-01", "2016-01-01", "2016-02-01", "2016-03-01", "2016-04-01", "2016-05-01", "2016-06-01", "2016-07-01", "2016-08-01", "2016-09-01", "2016-10-01", "2016-11-01", "2016-12-01", "2017-01-01", "2017-02-01", "2017-03-01", "2017-04-01", "2017-05-01", "2017-06-01", "2017-07-01", "2017-08-01", "2017-09-01", "2017-10-01", "2017-11-01", "2017-12-01", "2018-01-01", "2018-02-01", "2018-03-01", "2018-04-01", "2018-05-01", "2018-06-01", "2018-07-01", "2018-08-01", "2018-09-01", "2018-10-01", "2018-11-01", "2018-12-01", "2019-01-01", "2019-02-01", "2019-03-01", "2019-04-01", "2019-05-01", "2019-06-01", "2019-07-01", "2019-08-01", "2019-09-01", "2019-10-01", "2019-11-01", "2019-12-01", "2020-01-01", "2020-02-01", "2020-03-01", "2020-04-01", "2020-05-01", "2020-06-01", "2020-07-01", "2020-08-01", "2020-09-01", "2020-10-01", "2020-11-01", "2020-12-01", "2021-01-01", "2021-02-01", "2021-03-01", "2021-04-01", "2021-05-01", "2021-06-01", "2021-07-01", "2021-08-01", "2021-09-01", "2021-10-01", "2021-11-01", "2021-12-01", "2022-01-01", "2022-02-01", "2022-03-01", "2022-04-01", "2022-05-01", "2022-06-01", "2022-07-01", "2022-08-01", "2022-09-01", "2022-10-01", "2022-11-01", "2022-12-01", "2023-01-01", "2023-02-01", "2023-03-01", "2023-04-01", "2023-05-01", "2023-06-01", "2023-07-01", "2023-08-01", "2023-09-01", "2023-10-01", "2023-11-01", "2023-12-01", "2024-01-01", "2024-02-01", "2024-03-01", "2024-04-01", "2024-05-01", "2024-06-01", "2024-07-01", "2024-08-01", "2024-09-01", "2024-10-01", "2024-11-01", "2024-12-01", "2025-01-01", "2025-02-01", "2025-03-01", "2025-04-01", "2025-05-01", "2025-06-01", "2025-07-01", "2025-08-01", "2025-09-01", "2025-11-01", "2025-12-01", "2026-01-01", "2026-02-01", "2026-03-01", "2026-04-01", "2026-05-01"], "y": [67.3, 67.3, 67.3, 67.3, 67.1, 67.1, 66.9, 66.9, 66.9, 66.8, 66.9, 67.0, 67.2, 67.1, 67.2, 66.9, 66.7, 66.7, 66.8, 66.5, 66.8, 66.7, 66.7, 66.7, 66.5, 66.8, 66.6, 66.7, 66.7, 66.6, 66.5, 66.6, 66.7, 66.6, 66.4, 66.3, 66.4, 66.4, 66.3, 66.4, 66.4, 66.5, 66.2, 66.1, 66.1, 66.1, 66.1, 65.9, 66.1, 66.0, 66.0, 65.9, 66.0, 66.1, 66.1, 66.0, 65.8, 65.9, 66.0, 65.9, 65.8, 65.9, 65.9, 66.1, 66.1, 66.1, 66.1, 66.2, 66.1, 66.1, 66.0, 66.0, 66.0, 66.1, 66.2, 66.1, 66.1, 66.2, 66.1, 66.2, 66.1, 66.2, 66.3, 66.4, 66.4, 66.3, 66.2, 65.9, 66.0, 66.0, 66.0, 65.8, 66.0, 65.8, 66.0, 66.0, 66.2, 66.0, 66.1, 65.9, 66.1, 66.1, 66.1, 66.1, 66.0, 66.0, 65.9, 65.8, 65.7, 65.8, 65.6, 65.7, 65.7, 65.7, 65.5, 65.4, 65.1, 65.0, 65.0, 64.6, 64.8, 64.9, 64.9, 65.2, 64.9, 64.6, 64.6, 64.7, 64.6, 64.4, 64.6, 64.3, 64.2, 64.1, 64.2, 64.2, 64.1, 64.0, 64.0, 64.1, 64.2, 64.1, 64.1, 64.0, 63.7, 63.8, 63.8, 63.7, 63.7, 63.8, 63.7, 63.5, 63.6, 63.8, 63.6, 63.7, 63.7, 63.4, 63.3, 63.4, 63.4, 63.4, 63.3, 63.3, 63.2, 62.8, 63.0, 62.9, 62.9, 62.9, 63.1, 62.8, 62.9, 62.8, 62.9, 62.9, 62.8, 62.9, 62.9, 62.8, 62.9, 62.7, 62.6, 62.8, 62.9, 62.7, 62.6, 62.6, 62.4, 62.5, 62.5, 62.7, 62.7, 62.8, 63.0, 62.9, 62.7, 62.7, 62.8, 62.9, 62.9, 62.8, 62.7, 62.7, 62.8, 62.9, 62.9, 63.0, 62.8, 62.8, 62.9, 62.9, 63.1, 62.7, 62.7, 62.7, 62.7, 63.0, 62.9, 62.9, 62.9, 63.0, 63.0, 62.6, 62.8, 62.9, 62.9, 63.0, 63.1, 63.1, 63.0, 62.8, 62.9, 63.0, 63.1, 63.1, 63.2, 63.3, 63.3, 63.3, 63.3, 63.3, 62.6, 60.1, 60.8, 61.5, 61.5, 61.7, 61.4, 61.7, 61.5, 61.5, 61.4, 61.4, 61.5, 61.6, 61.6, 61.7, 61.8, 61.7, 61.7, 61.8, 61.9, 62.0, 62.2, 62.3, 62.4, 62.2, 62.3, 62.2, 62.1, 62.3, 62.2, 62.2, 62.1, 62.3, 62.4, 62.5, 62.6, 62.6, 62.6, 62.6, 62.6, 62.8, 62.7, 62.6, 62.8, 62.5, 62.5, 62.6, 62.7, 62.6, 62.6, 62.6, 62.7, 62.7, 62.7, 62.5, 62.4, 62.5, 62.6, 62.5, 62.5, 62.6, 62.4, 62.3, 62.2, 62.3, 62.5, 62.5, 62.4, 62.1, 62.0, 61.9, 61.8, 61.8], "type": "scatter", "mode": "lines", "fill": "tozeroy", "fillcolor": "rgba(88,166,255,0.08)", "line": {"color": "#58a6ff", "width": 1.8}, "hovertemplate": "%{x}<br>%: %{y:.3f}<extra></extra>", "name": "CIVPART"}],{"paper_bgcolor": "#161b22", "plot_bgcolor": "#161b22", "font": {"color": "#8b949e", "size": 11, "family": "-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif"}, "title": {"text": "Labor Force Participation Rate", "font": {"color": "#e6edf3", "size": 12}, "x": 0.02, "xanchor": "left"}, "xaxis": {"gridcolor": "#30363d", "showgrid": true, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "yaxis": {"gridcolor": "#30363d", "showgrid": true, "title": {"text": "%", "font": {"size": 10}}, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "margin": {"t": 50, "b": 40, "l": 60, "r": 16}, "height": 260, "hovermode": "x unified", "hoverlabel": {"bgcolor": "#0d1117", "bordercolor": "#30363d", "font": {"color": "#e6edf3", "size": 11}}},{"responsive": true, "displayModeBar": false});
+Plotly.newPlot("chart_2",[{"x": ["2000-01-01", "2000-02-01", "2000-03-01", "2000-04-01", "2000-05-01", "2000-06-01", "2000-07-01", "2000-08-01", "2000-09-01", "2000-10-01", "2000-11-01", "2000-12-01", "2001-01-01", "2001-02-01", "2001-03-01", "2001-04-01", "2001-05-01", "2001-06-01", "2001-07-01", "2001-08-01", "2001-09-01", "2001-10-01", "2001-11-01", "2001-12-01", "2002-01-01", "2002-02-01", "2002-03-01", "2002-04-01", "2002-05-01", "2002-06-01", "2002-07-01", "2002-08-01", "2002-09-01", "2002-10-01", "2002-11-01", "2002-12-01", "2003-01-01", "2003-02-01", "2003-03-01", "2003-04-01", "2003-05-01", "2003-06-01", "2003-07-01", "2003-08-01", "2003-09-01", "2003-10-01", "2003-11-01", "2003-12-01", "2004-01-01", "2004-02-01", "2004-03-01", "2004-04-01", "2004-05-01", "2004-06-01", "2004-07-01", "2004-08-01", "2004-09-01", "2004-10-01", "2004-11-01", "2004-12-01", "2005-01-01", "2005-02-01", "2005-03-01", "2005-04-01", "2005-05-01", "2005-06-01", "2005-07-01", "2005-08-01", "2005-09-01", "2005-10-01", "2005-11-01", "2005-12-01", "2006-01-01", "2006-02-01", "2006-03-01", "2006-04-01", "2006-05-01", "2006-06-01", "2006-07-01", "2006-08-01", "2006-09-01", "2006-10-01", "2006-11-01", "2006-12-01", "2007-01-01", "2007-02-01", "2007-03-01", "2007-04-01", "2007-05-01", "2007-06-01", "2007-07-01", "2007-08-01", "2007-09-01", "2007-10-01", "2007-11-01", "2007-12-01", "2008-01-01", "2008-02-01", "2008-03-01", "2008-04-01", "2008-05-01", "2008-06-01", "2008-07-01", "2008-08-01", "2008-09-01", "2008-10-01", "2008-11-01", "2008-12-01", "2009-01-01", "2009-02-01", "2009-03-01", "2009-04-01", "2009-05-01", "2009-06-01", "2009-07-01", "2009-08-01", "2009-09-01", "2009-10-01", "2009-11-01", "2009-12-01", "2010-01-01", "2010-02-01", "2010-03-01", "2010-04-01", "2010-05-01", "2010-06-01", "2010-07-01", "2010-08-01", "2010-09-01", "2010-10-01", "2010-11-01", "2010-12-01", "2011-01-01", "2011-02-01", "2011-03-01", "2011-04-01", "2011-05-01", "2011-06-01", "2011-07-01", "2011-08-01", "2011-09-01", "2011-10-01", "2011-11-01", "2011-12-01", "2012-01-01", "2012-02-01", "2012-03-01", "2012-04-01", "2012-05-01", "2012-06-01", "2012-07-01", "2012-08-01", "2012-09-01", "2012-10-01", "2012-11-01", "2012-12-01", "2013-01-01", "2013-02-01", "2013-03-01", "2013-04-01", "2013-05-01", "2013-06-01", "2013-07-01", "2013-08-01", "2013-09-01", "2013-10-01", "2013-11-01", "2013-12-01", "2014-01-01", "2014-02-01", "2014-03-01", "2014-04-01", "2014-05-01", "2014-06-01", "2014-07-01", "2014-08-01", "2014-09-01", "2014-10-01", "2014-11-01", "2014-12-01", "2015-01-01", "2015-02-01", "2015-03-01", "2015-04-01", "2015-05-01", "2015-06-01", "2015-07-01", "2015-08-01", "2015-09-01", "2015-10-01", "2015-11-01", "2015-12-01", "2016-01-01", "2016-02-01", "2016-03-01", "2016-04-01", "2016-05-01", "2016-06-01", "2016-07-01", "2016-08-01", "2016-09-01", "2016-10-01", "2016-11-01", "2016-12-01", "2017-01-01", "2017-02-01", "2017-03-01", "2017-04-01", "2017-05-01", "2017-06-01", "2017-07-01", "2017-08-01", "2017-09-01", "2017-10-01", "2017-11-01", "2017-12-01", "2018-01-01", "2018-02-01", "2018-03-01", "2018-04-01", "2018-05-01", "2018-06-01", "2018-07-01", "2018-08-01", "2018-09-01", "2018-10-01", "2018-11-01", "2018-12-01", "2019-01-01", "2019-02-01", "2019-03-01", "2019-04-01", "2019-05-01", "2019-06-01", "2019-07-01", "2019-08-01", "2019-09-01", "2019-10-01", "2019-11-01", "2019-12-01", "2020-01-01", "2020-02-01", "2020-03-01", "2020-04-01", "2020-05-01", "2020-06-01", "2020-07-01", "2020-08-01", "2020-09-01", "2020-10-01", "2020-11-01", "2020-12-01", "2021-01-01", "2021-02-01", "2021-03-01", "2021-04-01", "2021-05-01", "2021-06-01", "2021-07-01", "2021-08-01", "2021-09-01", "2021-10-01", "2021-11-01", "2021-12-01", "2022-01-01", "2022-02-01", "2022-03-01", "2022-04-01", "2022-05-01", "2022-06-01", "2022-07-01", "2022-08-01", "2022-09-01", "2022-10-01", "2022-11-01", "2022-12-01", "2023-01-01", "2023-02-01", "2023-03-01", "2023-04-01", "2023-05-01", "2023-06-01", "2023-07-01", "2023-08-01", "2023-09-01", "2023-10-01", "2023-11-01", "2023-12-01", "2024-01-01", "2024-02-01", "2024-03-01", "2024-04-01", "2024-05-01", "2024-06-01", "2024-07-01", "2024-08-01", "2024-09-01", "2024-10-01", "2024-11-01", "2024-12-01", "2025-01-01", "2025-02-01", "2025-03-01", "2025-04-01", "2025-05-01", "2025-06-01", "2025-07-01", "2025-08-01", "2025-09-01", "2025-10-01", "2025-11-01", "2025-12-01", "2026-01-01", "2026-02-01", "2026-03-01", "2026-04-01", "2026-05-01"], "y": [131011.0, 131120.0, 131604.0, 131884.0, 132105.0, 132063.0, 132228.0, 132234.0, 132337.0, 132352.0, 132556.0, 132716.0, 132703.0, 132788.0, 132751.0, 132458.0, 132408.0, 132300.0, 132172.0, 132021.0, 131763.0, 131452.0, 131144.0, 130983.0, 130859.0, 130737.0, 130722.0, 130616.0, 130632.0, 130674.0, 130584.0, 130581.0, 130502.0, 130617.0, 130616.0, 130465.0, 130573.0, 130441.0, 130235.0, 130173.0, 130197.0, 130186.0, 130184.0, 130153.0, 130252.0, 130439.0, 130480.0, 130589.0, 130756.0, 130821.0, 131140.0, 131412.0, 131697.0, 131794.0, 131854.0, 131939.0, 132089.0, 132429.0, 132503.0, 132630.0, 132781.0, 133034.0, 133154.0, 133520.0, 133689.0, 133948.0, 134300.0, 134502.0, 134552.0, 134641.0, 134997.0, 135159.0, 135427.0, 135733.0, 136038.0, 136210.0, 136249.0, 136337.0, 136529.0, 136692.0, 136826.0, 136843.0, 137060.0, 137249.0, 137472.0, 137560.0, 137784.0, 137847.0, 137992.0, 138070.0, 138044.0, 138013.0, 138099.0, 138175.0, 138290.0, 138395.0, 138391.0, 138329.0, 138259.0, 138040.0, 137851.0, 137700.0, 137497.0, 137211.0, 136760.0, 136291.0, 135541.0, 134847.0, 134079.0, 133318.0, 132494.0, 131822.0, 131466.0, 131008.0, 130662.0, 130472.0, 130246.0, 130061.0, 130057.0, 129808.0, 129802.0, 129706.0, 129866.0, 130120.0, 130642.0, 130510.0, 130415.0, 130415.0, 130341.0, 130620.0, 130749.0, 130830.0, 130837.0, 131057.0, 131283.0, 131597.0, 131703.0, 131931.0, 131992.0, 132125.0, 132344.0, 132553.0, 132690.0, 132888.0, 133246.0, 133509.0, 133748.0, 133825.0, 133932.0, 134013.0, 134157.0, 134339.0, 134517.0, 134669.0, 134825.0, 135074.0, 135257.0, 135546.0, 135689.0, 135873.0, 136096.0, 136279.0, 136391.0, 136646.0, 136821.0, 137041.0, 137317.0, 137372.0, 137561.0, 137712.0, 137985.0, 138298.0, 138513.0, 138849.0, 139072.0, 139269.0, 139563.0, 139798.0, 140089.0, 140364.0, 140568.0, 140827.0, 140923.0, 141196.0, 141538.0, 141709.0, 141991.0, 142125.0, 142275.0, 142579.0, 142808.0, 143077.0, 143210.0, 143406.0, 143662.0, 143854.0, 143900.0, 144147.0, 144520.0, 144661.0, 144967.0, 145065.0, 145183.0, 145408.0, 145628.0, 145846.0, 145970.0, 146175.0, 146380.0, 146583.0, 146772.0, 146919.0, 147008.0, 147149.0, 147372.0, 147523.0, 147660.0, 148054.0, 148280.0, 148420.0, 148742.0, 148960.0, 149020.0, 149277.0, 149358.0, 149527.0, 149617.0, 149809.0, 150060.0, 150067.0, 150295.0, 150591.0, 150618.0, 150838.0, 150937.0, 151169.0, 151365.0, 151460.0, 151667.0, 151794.0, 152031.0, 152293.0, 150895.0, 130426.0, 133040.0, 137671.0, 139255.0, 140821.0, 141770.0, 142460.0, 142733.0, 142548.0, 142863.0, 143380.0, 144232.0, 144587.0, 145065.0, 145820.0, 146762.0, 147314.0, 147771.0, 148572.0, 149230.0, 149816.0, 150006.0, 150825.0, 151315.0, 151623.0, 151924.0, 152358.0, 153072.0, 153362.0, 153582.0, 153939.0, 154242.0, 154342.0, 154776.0, 155066.0, 155134.0, 155375.0, 155655.0, 155880.0, 156043.0, 156261.0, 156417.0, 156576.0, 156703.0, 156857.0, 157032.0, 157238.0, 157466.0, 157530.0, 157608.0, 157695.0, 157748.0, 157757.0, 157912.0, 157945.0, 158079.0, 158316.0, 158268.0, 158310.0, 158377.0, 158485.0, 158498.0, 158478.0, 158542.0, 158472.0, 158548.0, 158408.0, 158449.0, 158432.0, 158592.0, 158436.0, 158650.0, 158829.0, 159001.0], "type": "scatter", "mode": "lines", "fill": "tozeroy", "fillcolor": "rgba(88,166,255,0.08)", "line": {"color": "#58a6ff", "width": 1.8}, "hovertemplate": "%{x}<br>Thous. of Persons: %{y:.3f}<extra></extra>", "name": "PAYEMS"}],{"paper_bgcolor": "#161b22", "plot_bgcolor": "#161b22", "font": {"color": "#8b949e", "size": 11, "family": "-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif"}, "title": {"text": "All Employees, Total Nonfarm", "font": {"color": "#e6edf3", "size": 12}, "x": 0.02, "xanchor": "left"}, "xaxis": {"gridcolor": "#30363d", "showgrid": true, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "yaxis": {"gridcolor": "#30363d", "showgrid": true, "title": {"text": "Thous. of Persons", "font": {"size": 10}}, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "margin": {"t": 50, "b": 40, "l": 60, "r": 16}, "height": 260, "hovermode": "x unified", "hoverlabel": {"bgcolor": "#0d1117", "bordercolor": "#30363d", "font": {"color": "#e6edf3", "size": 11}}},{"responsive": true, "displayModeBar": false});
+Plotly.newPlot("chart_3",[{"x": ["2006-01-01", "2007-01-01", "2008-01-01", "2009-01-01", "2010-01-01", "2011-01-01", "2012-01-01", "2013-01-01", "2014-01-01", "2015-01-01", "2016-01-01", "2017-01-01", "2018-01-01", "2019-01-01", "2020-01-01", "2021-01-01", "2022-01-01", "2023-01-01", "2024-01-01", "2025-01-01"], "y": [5.9737, 5.7748, 5.824, 6.4093, 6.2809, 6.1488, 6.1518, 6.0991, 5.9572, 5.9983, 5.9707, 5.8979, 5.7595, 5.5882, 6.5873, 6.0452, 5.2343, 4.8496, 4.8059, 4.791], "type": "scatter", "mode": "lines", "fill": "tozeroy", "fillcolor": "rgba(210,168,255,0.07)", "line": {"color": "#d2a8ff", "width": 1.8}, "hovertemplate": "%{x}<br>%: %{y:.3f}<extra></extra>", "name": "WB:SL.UEM.TOTL.ZS"}],{"paper_bgcolor": "#161b22", "plot_bgcolor": "#161b22", "font": {"color": "#8b949e", "size": 11, "family": "-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif"}, "title": {"text": "Unemployment, total (% of total labor force) (modeled ILO estimate) (World Bank, Global)", "font": {"color": "#e6edf3", "size": 12}, "x": 0.02, "xanchor": "left"}, "xaxis": {"gridcolor": "#30363d", "showgrid": true, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "yaxis": {"gridcolor": "#30363d", "showgrid": true, "title": {"text": "%", "font": {"size": 10}}, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "margin": {"t": 50, "b": 40, "l": 60, "r": 16}, "height": 260, "hovermode": "x unified", "hoverlabel": {"bgcolor": "#0d1117", "bordercolor": "#30363d", "font": {"color": "#e6edf3", "size": 11}}},{"responsive": true, "displayModeBar": false});
+Plotly.newPlot("chart_4",[{"x": ["2005-01-01", "2006-01-01", "2007-01-01", "2008-01-01", "2009-01-01", "2010-01-01", "2011-01-01", "2012-01-01", "2013-01-01", "2014-01-01", "2015-01-01", "2016-01-01", "2017-01-01", "2018-01-01", "2019-01-01", "2020-01-01", "2021-01-01", "2022-01-01", "2023-01-01", "2024-01-01"], "y": [7284.3133, 7796.3493, 8677.571, 9415.3579, 8816.8106, 9542.7289, 10485.1772, 10583.9967, 10739.8912, 10885.7966, 10161.9446, 10204.9288, 10747.7643, 11309.3831, 11376.0818, 10937.6846, 12390.6687, 12798.1658, 13236.7164, 13631.2043], "type": "scatter", "mode": "lines", "fill": "tozeroy", "fillcolor": "rgba(210,168,255,0.07)", "line": {"color": "#d2a8ff", "width": 1.8}, "hovertemplate": "%{x}<br>%: %{y:.3f}<extra></extra>", "name": "WB:NY.GDP.PCAP.CD"}],{"paper_bgcolor": "#161b22", "plot_bgcolor": "#161b22", "font": {"color": "#8b949e", "size": 11, "family": "-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif"}, "title": {"text": "GDP per capita (current US$) (World Bank, Global)", "font": {"color": "#e6edf3", "size": 12}, "x": 0.02, "xanchor": "left"}, "xaxis": {"gridcolor": "#30363d", "showgrid": true, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "yaxis": {"gridcolor": "#30363d", "showgrid": true, "title": {"text": "%", "font": {"size": 10}}, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "margin": {"t": 50, "b": 40, "l": 60, "r": 16}, "height": 260, "hovermode": "x unified", "hoverlabel": {"bgcolor": "#0d1117", "bordercolor": "#30363d", "font": {"color": "#e6edf3", "size": 11}}},{"responsive": true, "displayModeBar": false});
+Plotly.newPlot("chart_5",[{"x": ["2005-01-01", "2005-02-01", "2005-03-01", "2005-04-01", "2005-05-01", "2005-06-01", "2005-07-01", "2005-08-01", "2005-09-01", "2005-10-01", "2005-11-01", "2005-12-01", "2006-01-01", "2006-02-01", "2006-03-01", "2006-04-01", "2006-05-01", "2006-06-01", "2006-07-01", "2006-08-01", "2006-09-01", "2006-10-01", "2006-11-01", "2006-12-01", "2007-01-01", "2007-02-01", "2007-03-01", "2007-04-01", "2007-05-01", "2007-06-01", "2007-07-01", "2007-08-01", "2007-09-01", "2007-10-01", "2007-11-01", "2007-12-01", "2008-01-01", "2008-02-01", "2008-03-01", "2008-04-01", "2008-05-01", "2008-06-01", "2008-07-01", "2008-08-01", "2008-09-01", "2008-10-01", "2008-11-01", "2008-12-01", "2009-01-01", "2009-02-01", "2009-03-01", "2009-04-01", "2009-05-01", "2009-06-01", "2009-07-01", "2009-08-01", "2009-09-01", "2009-10-01", "2009-11-01", "2009-12-01", "2010-01-01", "2010-02-01", "2010-03-01", "2010-04-01", "2010-05-01", "2010-06-01", "2010-07-01", "2010-08-01", "2010-09-01", "2010-10-01", "2010-11-01", "2010-12-01", "2011-01-01", "2011-02-01", "2011-03-01", "2011-04-01", "2011-05-01", "2011-06-01", "2011-07-01", "2011-08-01", "2011-09-01", "2011-10-01", "2011-11-01", "2011-12-01", "2012-01-01", "2012-02-01", "2012-03-01", "2012-04-01", "2012-05-01", "2012-06-01", "2012-07-01", "2012-08-01", "2012-09-01", "2012-10-01", "2012-11-01", "2012-12-01", "2013-01-01", "2013-02-01", "2013-03-01", "2013-04-01", "2013-05-01", "2013-06-01", "2013-07-01", "2013-08-01", "2013-09-01", "2013-10-01", "2013-11-01", "2013-12-01", "2014-01-01", "2014-02-01", "2014-03-01", "2014-04-01", "2014-05-01", "2014-06-01", "2014-07-01", "2014-08-01", "2014-09-01", "2014-10-01", "2014-11-01", "2014-12-01", "2015-01-01", "2015-02-01", "2015-03-01", "2015-04-01", "2015-05-01", "2015-06-01", "2015-07-01", "2015-08-01", "2015-09-01", "2015-10-01", "2015-11-01", "2015-12-01", "2016-01-01", "2016-02-01", "2016-03-01", "2016-04-01", "2016-05-01", "2016-06-01", "2016-07-01", "2016-08-01", "2016-09-01", "2016-10-01", "2016-11-01", "2016-12-01", "2017-01-01", "2017-02-01", "2017-03-01", "2017-04-01", "2017-05-01", "2017-06-01", "2017-07-01", "2017-08-01", "2017-09-01", "2017-10-01", "2017-11-01", "2017-12-01", "2018-01-01", "2018-02-01", "2018-03-01", "2018-04-01", "2018-05-01", "2018-06-01", "2018-07-01", "2018-08-01", "2018-09-01", "2018-10-01", "2018-11-01", "2018-12-01", "2019-01-01", "2019-02-01", "2019-03-01", "2019-04-01", "2019-05-01", "2019-06-01", "2019-07-01", "2019-08-01", "2019-09-01", "2019-10-01", "2019-11-01", "2019-12-01", "2020-01-01", "2020-02-01", "2020-03-01", "2020-04-01", "2020-05-01", "2020-06-01", "2020-07-01", "2020-08-01", "2020-09-01", "2020-10-01", "2020-11-01", "2020-12-01", "2021-01-01", "2021-02-01", "2021-03-01", "2021-04-01", "2021-05-01", "2021-06-01", "2021-07-01", "2021-08-01", "2021-09-01", "2021-10-01", "2021-11-01", "2021-12-01", "2022-01-01", "2022-02-01", "2022-03-01", "2022-04-01", "2022-05-01", "2022-06-01", "2022-07-01", "2022-08-01", "2022-09-01", "2022-10-01", "2022-11-01", "2022-12-01", "2023-01-01", "2023-02-01", "2023-03-01", "2023-04-01", "2023-05-01", "2023-06-01", "2023-07-01", "2023-08-01", "2023-09-01", "2023-10-01", "2023-11-01", "2023-12-01", "2024-01-01", "2024-02-01", "2024-03-01", "2024-04-01", "2024-05-01", "2024-06-01", "2024-07-01", "2024-08-01", "2024-09-01", "2024-10-01", "2024-11-01", "2024-12-01"], "y": [15.9, 15.93, 15.97, 16.01, 16.04, 16.08, 16.15, 16.17, 16.19, 16.28, 16.3, 16.36, 16.42, 16.48, 16.54, 16.63, 16.65, 16.72, 16.78, 16.82, 16.87, 16.93, 16.98, 17.05, 17.09, 17.16, 17.22, 17.27, 17.34, 17.41, 17.46, 17.5, 17.55, 17.58, 17.63, 17.68, 17.74, 17.8, 17.87, 17.92, 17.98, 18.04, 18.1, 18.18, 18.2, 18.25, 18.31, 18.39, 18.39, 18.44, 18.49, 18.52, 18.53, 18.56, 18.59, 18.67, 18.7, 18.74, 18.8, 18.84, 18.88, 18.91, 18.92, 18.96, 19.01, 19.03, 19.04, 19.11, 19.11, 19.21, 19.21, 19.23, 19.33, 19.31, 19.3, 19.36, 19.41, 19.41, 19.48, 19.47, 19.49, 19.56, 19.56, 19.57, 19.59, 19.58, 19.64, 19.68, 19.68, 19.71, 19.75, 19.74, 19.79, 19.79, 19.84, 19.9, 19.93, 19.99, 20.01, 20.04, 20.05, 20.13, 20.14, 20.17, 20.23, 20.25, 20.31, 20.34, 20.39, 20.51, 20.5, 20.51, 20.53, 20.6, 20.61, 20.66, 20.66, 20.7, 20.77, 20.71, 20.8, 20.84, 20.91, 20.92, 20.98, 21.0, 21.03, 21.11, 21.09, 21.19, 21.21, 21.23, 21.31, 21.33, 21.39, 21.46, 21.48, 21.52, 21.58, 21.6, 21.62, 21.71, 21.71, 21.76, 21.82, 21.85, 21.88, 21.94, 21.97, 22.02, 22.07, 22.1, 22.18, 22.18, 22.22, 22.29, 22.36, 22.41, 22.49, 22.55, 22.6, 22.66, 22.7, 22.78, 22.86, 22.89, 23.0, 23.11, 23.13, 23.19, 23.29, 23.33, 23.4, 23.48, 23.53, 23.61, 23.68, 23.75, 23.83, 23.85, 23.91, 24.03, 24.12, 25.14, 24.98, 24.78, 24.69, 24.8, 24.82, 24.84, 24.94, 25.16, 25.16, 25.25, 25.33, 25.52, 25.68, 25.82, 25.97, 26.12, 26.3, 26.45, 26.56, 26.76, 26.91, 26.97, 27.1, 27.28, 27.4, 27.52, 27.66, 27.75, 27.87, 27.99, 28.11, 28.22, 28.31, 28.42, 28.56, 28.7, 28.78, 28.89, 29.01, 29.06, 29.18, 29.26, 29.37, 29.47, 29.61, 29.66, 29.78, 29.85, 29.97, 30.07, 30.16, 30.27, 30.39, 30.48, 30.56, 30.66], "type": "scatter", "mode": "lines", "fill": "tozeroy", "fillcolor": "rgba(255,166,87,0.07)", "line": {"color": "#ffa657", "width": 1.8}, "hovertemplate": "%{x}<br>$/hour: %{y:.3f}<extra></extra>", "name": "BLS:CES0500000008"}],{"paper_bgcolor": "#161b22", "plot_bgcolor": "#161b22", "font": {"color": "#8b949e", "size": 11, "family": "-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif"}, "title": {"text": "Average Hourly Earnings, Private Sector ($/hr)", "font": {"color": "#e6edf3", "size": 12}, "x": 0.02, "xanchor": "left"}, "xaxis": {"gridcolor": "#30363d", "showgrid": true, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "yaxis": {"gridcolor": "#30363d", "showgrid": true, "title": {"text": "$/hour", "font": {"size": 10}}, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "margin": {"t": 50, "b": 40, "l": 60, "r": 16}, "height": 260, "hovermode": "x unified", "hoverlabel": {"bgcolor": "#0d1117", "bordercolor": "#30363d", "font": {"color": "#e6edf3", "size": 11}}},{"responsive": true, "displayModeBar": false});
+Plotly.newPlot("chart_6",[{"x": ["2005-01-01", "2005-02-01", "2005-03-01", "2005-04-01", "2005-05-01", "2005-06-01", "2005-07-01", "2005-08-01", "2005-09-01", "2005-10-01", "2005-11-01", "2005-12-01", "2006-01-01", "2006-02-01", "2006-03-01", "2006-04-01", "2006-05-01", "2006-06-01", "2006-07-01", "2006-08-01", "2006-09-01", "2006-10-01", "2006-11-01", "2006-12-01", "2007-01-01", "2007-02-01", "2007-03-01", "2007-04-01", "2007-05-01", "2007-06-01", "2007-07-01", "2007-08-01", "2007-09-01", "2007-10-01", "2007-11-01", "2007-12-01", "2008-01-01", "2008-02-01", "2008-03-01", "2008-04-01", "2008-05-01", "2008-06-01", "2008-07-01", "2008-08-01", "2008-09-01", "2008-10-01", "2008-11-01", "2008-12-01", "2009-01-01", "2009-02-01", "2009-03-01", "2009-04-01", "2009-05-01", "2009-06-01", "2009-07-01", "2009-08-01", "2009-09-01", "2009-10-01", "2009-11-01", "2009-12-01", "2010-01-01", "2010-02-01", "2010-03-01", "2010-04-01", "2010-05-01", "2010-06-01", "2010-07-01", "2010-08-01", "2010-09-01", "2010-10-01", "2010-11-01", "2010-12-01", "2011-01-01", "2011-02-01", "2011-03-01", "2011-04-01", "2011-05-01", "2011-06-01", "2011-07-01", "2011-08-01", "2011-09-01", "2011-10-01", "2011-11-01", "2011-12-01", "2012-01-01", "2012-02-01", "2012-03-01", "2012-04-01", "2012-05-01", "2012-06-01", "2012-07-01", "2012-08-01", "2012-09-01", "2012-10-01", "2012-11-01", "2012-12-01", "2013-01-01", "2013-02-01", "2013-03-01", "2013-04-01", "2013-05-01", "2013-06-01", "2013-07-01", "2013-08-01", "2013-09-01", "2013-10-01", "2013-11-01", "2013-12-01", "2014-01-01", "2014-02-01", "2014-03-01", "2014-04-01", "2014-05-01", "2014-06-01", "2014-07-01", "2014-08-01", "2014-09-01", "2014-10-01", "2014-11-01", "2014-12-01", "2015-01-01", "2015-02-01", "2015-03-01", "2015-04-01", "2015-05-01", "2015-06-01", "2015-07-01", "2015-08-01", "2015-09-01", "2015-10-01", "2015-11-01", "2015-12-01", "2016-01-01", "2016-02-01", "2016-03-01", "2016-04-01", "2016-05-01", "2016-06-01", "2016-07-01", "2016-08-01", "2016-09-01", "2016-10-01", "2016-11-01", "2016-12-01", "2017-01-01", "2017-02-01", "2017-03-01", "2017-04-01", "2017-05-01", "2017-06-01", "2017-07-01", "2017-08-01", "2017-09-01", "2017-10-01", "2017-11-01", "2017-12-01", "2018-01-01", "2018-02-01", "2018-03-01", "2018-04-01", "2018-05-01", "2018-06-01", "2018-07-01", "2018-08-01", "2018-09-01", "2018-10-01", "2018-11-01", "2018-12-01", "2019-01-01", "2019-02-01", "2019-03-01", "2019-04-01", "2019-05-01", "2019-06-01", "2019-07-01", "2019-08-01", "2019-09-01", "2019-10-01", "2019-11-01", "2019-12-01", "2020-01-01", "2020-02-01", "2020-03-01", "2020-04-01", "2020-05-01", "2020-06-01", "2020-07-01", "2020-08-01", "2020-09-01", "2020-10-01", "2020-11-01", "2020-12-01", "2021-01-01", "2021-02-01", "2021-03-01", "2021-04-01", "2021-05-01", "2021-06-01", "2021-07-01", "2021-08-01", "2021-09-01", "2021-10-01", "2021-11-01", "2021-12-01", "2022-01-01", "2022-02-01", "2022-03-01", "2022-04-01", "2022-05-01", "2022-06-01", "2022-07-01", "2022-08-01", "2022-09-01", "2022-10-01", "2022-11-01", "2022-12-01", "2023-01-01", "2023-02-01", "2023-03-01", "2023-04-01", "2023-05-01", "2023-06-01", "2023-07-01", "2023-08-01", "2023-09-01", "2023-10-01", "2023-11-01", "2023-12-01", "2024-01-01", "2024-02-01", "2024-03-01", "2024-04-01", "2024-05-01", "2024-06-01", "2024-07-01", "2024-08-01", "2024-09-01", "2024-10-01", "2024-11-01", "2024-12-01"], "y": [4.1, 4.3, 3.9, 4.2, 4.2, 3.6, 4.8, 3.7, 4.3, 3.2, 3.6, 3.8, 3.0, 3.0, 3.5, 3.9, 3.3, 3.1, 2.4, 3.0, 3.0, 2.8, 3.1, 2.5, 3.1, 2.6, 3.0, 3.5, 3.2, 2.7, 2.7, 3.5, 3.4, 3.8, 3.6, 3.7, 3.1, 2.9, 3.6, 3.5, 4.1, 4.2, 3.7, 4.5, 4.0, 3.9, 4.8, 5.1, 6.1, 6.7, 6.5, 6.8, 7.0, 7.9, 8.1, 7.6, 7.6, 7.6, 7.2, 8.4, 8.3, 8.2, 7.6, 7.0, 7.8, 7.4, 7.9, 7.3, 6.6, 7.2, 7.5, 7.2, 6.8, 6.7, 7.3, 6.5, 7.2, 6.5, 7.4, 7.2, 8.0, 7.4, 6.4, 6.8, 6.7, 6.2, 6.4, 5.4, 5.5, 6.1, 5.9, 5.9, 4.9, 4.9, 6.3, 6.6, 6.4, 6.0, 5.1, 5.3, 4.5, 4.7, 5.3, 5.1, 5.4, 5.4, 5.2, 4.3, 4.7, 5.9, 5.5, 5.9, 5.7, 4.7, 4.2, 4.5, 4.4, 5.1, 4.8, 4.4, 4.0, 4.0, 3.2, 4.4, 4.1, 3.9, 3.9, 3.4, 3.5, 3.5, 3.9, 4.1, 3.6, 3.8, 3.9, 3.8, 4.1, 3.6, 3.8, 4.1, 3.8, 3.4, 3.1, 2.7, 3.6, 3.5, 3.2, 3.3, 3.6, 3.7, 3.7, 3.9, 3.6, 3.0, 3.1, 2.6, 2.9, 3.0, 3.1, 2.9, 2.2, 3.2, 3.0, 2.9, 3.5, 3.1, 2.8, 3.3, 3.0, 3.2, 3.0, 2.3, 2.6, 2.0, 2.8, 2.8, 2.5, 2.9, 2.6, 2.6, 3.0, 2.5, 4.2, 14.5, 15.0, 13.6, 12.0, 10.5, 8.9, 7.5, 6.7, 6.0, 6.6, 5.1, 6.0, 5.8, 5.7, 5.5, 5.2, 4.4, 4.1, 4.1, 3.8, 3.8, 3.6, 3.0, 2.8, 3.2, 2.5, 2.9, 2.6, 2.7, 2.4, 2.9, 2.6, 2.5, 2.9, 3.4, 2.9, 2.9, 3.0, 3.1, 2.3, 3.1, 2.7, 3.0, 3.5, 3.1, 2.9, 3.5, 2.6, 2.9, 3.1, 4.1, 3.6, 4.1, 4.0, 3.9, 3.8, 3.5], "type": "scatter", "mode": "lines", "fill": "tozeroy", "fillcolor": "rgba(255,166,87,0.07)", "line": {"color": "#ffa657", "width": 1.8}, "hovertemplate": "%{x}<br>percent: %{y:.3f}<extra></extra>", "name": "BLS:LNS14032183"}],{"paper_bgcolor": "#161b22", "plot_bgcolor": "#161b22", "font": {"color": "#8b949e", "size": 11, "family": "-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif"}, "title": {"text": "Unemployment Rate, Less than HS Diploma (%)", "font": {"color": "#e6edf3", "size": 12}, "x": 0.02, "xanchor": "left"}, "xaxis": {"gridcolor": "#30363d", "showgrid": true, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "yaxis": {"gridcolor": "#30363d", "showgrid": true, "title": {"text": "percent", "font": {"size": 10}}, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "margin": {"t": 50, "b": 40, "l": 60, "r": 16}, "height": 260, "hovermode": "x unified", "hoverlabel": {"bgcolor": "#0d1117", "bordercolor": "#30363d", "font": {"color": "#e6edf3", "size": 11}}},{"responsive": true, "displayModeBar": false});
+Plotly.newPlot("chart_7",[{"x": ["2005-01-01", "2005-02-01", "2005-03-01", "2005-04-01", "2005-05-01", "2005-06-01", "2005-07-01", "2005-08-01", "2005-09-01", "2005-10-01", "2005-11-01", "2005-12-01", "2006-01-01", "2006-02-01", "2006-03-01", "2006-04-01", "2006-05-01", "2006-06-01", "2006-07-01", "2006-08-01", "2006-09-01", "2006-10-01", "2006-11-01", "2006-12-01", "2007-01-01", "2007-02-01", "2007-03-01", "2007-04-01", "2007-05-01", "2007-06-01", "2007-07-01", "2007-08-01", "2007-09-01", "2007-10-01", "2007-11-01", "2007-12-01", "2008-01-01", "2008-02-01", "2008-03-01", "2008-04-01", "2008-05-01", "2008-06-01", "2008-07-01", "2008-08-01", "2008-09-01", "2008-10-01", "2008-11-01", "2008-12-01", "2009-01-01", "2009-02-01", "2009-03-01", "2009-04-01", "2009-05-01", "2009-06-01", "2009-07-01", "2009-08-01", "2009-09-01", "2009-10-01", "2009-11-01", "2009-12-01", "2010-01-01", "2010-02-01", "2010-03-01", "2010-04-01", "2010-05-01", "2010-06-01", "2010-07-01", "2010-08-01", "2010-09-01", "2010-10-01", "2010-11-01", "2010-12-01", "2011-01-01", "2011-02-01", "2011-03-01", "2011-04-01", "2011-05-01", "2011-06-01", "2011-07-01", "2011-08-01", "2011-09-01", "2011-10-01", "2011-11-01", "2011-12-01", "2012-01-01", "2012-02-01", "2012-03-01", "2012-04-01", "2012-05-01", "2012-06-01", "2012-07-01", "2012-08-01", "2012-09-01", "2012-10-01", "2012-11-01", "2012-12-01", "2013-01-01", "2013-02-01", "2013-03-01", "2013-04-01", "2013-05-01", "2013-06-01", "2013-07-01", "2013-08-01", "2013-09-01", "2013-10-01", "2013-11-01", "2013-12-01", "2014-01-01", "2014-02-01", "2014-03-01", "2014-04-01", "2014-05-01", "2014-06-01", "2014-07-01", "2014-08-01", "2014-09-01", "2014-10-01", "2014-11-01", "2014-12-01", "2015-01-01", "2015-02-01", "2015-03-01", "2015-04-01", "2015-05-01", "2015-06-01", "2015-07-01", "2015-08-01", "2015-09-01", "2015-10-01", "2015-11-01", "2015-12-01", "2016-01-01", "2016-02-01", "2016-03-01", "2016-04-01", "2016-05-01", "2016-06-01", "2016-07-01", "2016-08-01", "2016-09-01", "2016-10-01", "2016-11-01", "2016-12-01", "2017-01-01", "2017-02-01", "2017-03-01", "2017-04-01", "2017-05-01", "2017-06-01", "2017-07-01", "2017-08-01", "2017-09-01", "2017-10-01", "2017-11-01", "2017-12-01", "2018-01-01", "2018-02-01", "2018-03-01", "2018-04-01", "2018-05-01", "2018-06-01", "2018-07-01", "2018-08-01", "2018-09-01", "2018-10-01", "2018-11-01", "2018-12-01", "2019-01-01", "2019-02-01", "2019-03-01", "2019-04-01", "2019-05-01", "2019-06-01", "2019-07-01", "2019-08-01", "2019-09-01", "2019-10-01", "2019-11-01", "2019-12-01", "2020-01-01", "2020-02-01", "2020-03-01", "2020-04-01", "2020-05-01", "2020-06-01", "2020-07-01", "2020-08-01", "2020-09-01", "2020-10-01", "2020-11-01", "2020-12-01", "2021-01-01", "2021-02-01", "2021-03-01", "2021-04-01", "2021-05-01", "2021-06-01", "2021-07-01", "2021-08-01", "2021-09-01", "2021-10-01", "2021-11-01", "2021-12-01", "2022-01-01", "2022-02-01", "2022-03-01", "2022-04-01", "2022-05-01", "2022-06-01", "2022-07-01", "2022-08-01", "2022-09-01", "2022-10-01", "2022-11-01", "2022-12-01", "2023-01-01", "2023-02-01", "2023-03-01", "2023-04-01", "2023-05-01", "2023-06-01", "2023-07-01", "2023-08-01", "2023-09-01", "2023-10-01", "2023-11-01", "2023-12-01", "2024-01-01", "2024-02-01", "2024-03-01", "2024-04-01", "2024-05-01", "2024-06-01", "2024-07-01", "2024-08-01", "2024-09-01", "2024-10-01", "2024-11-01", "2024-12-01"], "y": [8.26, 8.26, 8.26, 8.29, 8.3, 8.31, 8.32, 8.34, 8.4, 8.4, 8.43, 8.46, 8.47, 8.52, 8.56, 8.61, 8.67, 8.67, 8.69, 8.73, 8.77, 8.81, 8.85, 8.93, 8.99, 9.05, 9.09, 9.13, 9.17, 9.22, 9.3, 9.33, 9.35, 9.38, 9.42, 9.44, 9.45, 9.5, 9.5, 9.52, 9.56, 9.59, 9.58, 9.64, 9.68, 9.67, 9.67, 9.7, 9.72, 9.75, 9.76, 9.77, 9.78, 9.8, 9.85, 9.92, 9.98, 10.0, 10.02, 10.02, 10.08, 10.11, 10.11, 10.13, 10.14, 10.14, 10.16, 10.16, 10.16, 10.17, 10.19, 10.22, 10.25, 10.26, 10.29, 10.32, 10.35, 10.37, 10.37, 10.38, 10.4, 10.43, 10.45, 10.47, 10.49, 10.5, 10.54, 10.6, 10.59, 10.6, 10.6, 10.59, 10.62, 10.64, 10.66, 10.66, 10.66, 10.71, 10.71, 10.73, 10.73, 10.74, 10.78, 10.79, 10.81, 10.83, 10.84, 10.9, 10.91, 10.93, 10.96, 10.96, 11.02, 11.08, 11.12, 11.19, 11.23, 11.26, 11.28, 11.31, 11.32, 11.35, 11.36, 11.4, 11.42, 11.43, 11.48, 11.52, 11.55, 11.61, 11.66, 11.68, 11.78, 11.76, 11.81, 11.85, 11.9, 11.93, 12.03, 12.04, 12.09, 12.11, 12.15, 12.13, 12.29, 12.34, 12.4, 12.46, 12.51, 12.53, 12.54, 12.59, 12.61, 12.64, 12.67, 12.87, 12.85, 12.85, 12.88, 12.92, 12.99, 13.06, 13.1, 13.14, 13.16, 13.23, 13.3, 13.4, 13.41, 13.47, 13.51, 13.52, 13.56, 13.58, 13.63, 13.7, 13.76, 13.82, 13.9, 13.93, 14.06, 14.09, 13.7, 13.33, 13.55, 13.71, 13.64, 13.82, 13.95, 14.07, 14.19, 13.8, 14.08, 14.29, 14.5, 14.92, 15.08, 15.45, 15.64, 15.79, 15.94, 16.05, 16.14, 16.24, 16.22, 16.45, 16.66, 16.78, 16.84, 16.91, 16.96, 17.09, 17.18, 17.26, 17.34, 17.42, 17.44, 17.41, 17.53, 17.61, 17.76, 17.92, 17.99, 17.99, 18.04, 18.18, 18.32, 18.26, 18.27, 18.36, 18.43, 18.51, 18.56, 18.63, 18.68, 18.73, 18.79, 18.83, 18.9, 19.0], "type": "scatter", "mode": "lines", "fill": "tozeroy", "fillcolor": "rgba(255,166,87,0.07)", "line": {"color": "#ffa657", "width": 1.8}, "hovertemplate": "%{x}<br>$/hour: %{y:.3f}<extra></extra>", "name": "BLS:CES7072200008"}],{"paper_bgcolor": "#161b22", "plot_bgcolor": "#161b22", "font": {"color": "#8b949e", "size": 11, "family": "-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif"}, "title": {"text": "Average Hourly Earnings, Food Services ($/hr)", "font": {"color": "#e6edf3", "size": 12}, "x": 0.02, "xanchor": "left"}, "xaxis": {"gridcolor": "#30363d", "showgrid": true, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "yaxis": {"gridcolor": "#30363d", "showgrid": true, "title": {"text": "$/hour", "font": {"size": 10}}, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "margin": {"t": 50, "b": 40, "l": 60, "r": 16}, "height": 260, "hovermode": "x unified", "hoverlabel": {"bgcolor": "#0d1117", "bordercolor": "#30363d", "font": {"color": "#e6edf3", "size": 11}}},{"responsive": true, "displayModeBar": false});
+Plotly.newPlot("chart_forest",[{"type": "scatter", "mode": "markers", "x": [-50.0, 0.0, 0.0075, 0.6, 13.5, -10.5609], "y": ["Native Internal Migration and the Labor Ma", "The domestic economic impacts of immigrati", "Scarce Workers, High Wages?", "Immigration and National Wages: Clarifying", "How Much Does Immigration Boost Innovation", "\u25c6 Pooled (citation-weighted)"], "error_x": {"type": "data", "symmetric": false, "array": [10.0, null, 0.0035, 0.0, 4.5, null], "arrayminus": [10.0, null, 0.0035, 1.3, 4.5, null], "visible": true, "color": "#8b949e", "thickness": 1.8, "width": 7}, "marker": {"color": ["#f85149", "#8b949e", "#3fb950", "#8b949e", "#3fb950", "#58a6ff"], "size": [18, 10, 10, 18, 18, 20], "symbol": ["square", "square", "square", "square", "square", "diamond"], "line": {"color": "#0d1117", "width": 1.5}}, "hovertemplate": "%{customdata}<extra></extra>", "customdata": ["<b>Native Internal Migration and the Labor Marke</b><br>Estimate: -50.0000<br>95% CI: [-60.000, -40.000]<br>Unit: % attenuation of local wage impact due to native migration<br>Method: OLS \u00b7 United States<br>Citations: 444", "<b>The domestic economic impacts of immigration</b><br>Estimate: 0.0000<br>95% CI: not reported<br>Unit: average wage effect of immigration<br>Method: meta-analysis \u00b7 wealthy countries<br>Citations: 0", "<b>Scarce Workers, High Wages?</b><br>Estimate: 0.0075<br>95% CI: [0.004, 0.011]<br>Unit: wage elasticity (labor scarcity to real wages)<br>Method: IV \u00b7 Germany<br>Citations: 0", "<b>Immigration and National Wages: Clarifying th</b><br>Estimate: 0.6000<br>95% CI: [-0.700, 0.600]<br>Unit: % change in native wages (long-run average estimate)<br>Method: structural \u00b7 United States<br>Citations: 269", "<b>How Much Does Immigration Boost Innovation?</b><br>Estimate: 13.5000<br>95% CI: [9.000, 18.000]<br>Unit: % increase in patents per capita per 1pp immigrant share increase<br>Method: IV \u00b7 United States<br>Citations: 808", "<b>Pooled (citation-weighted mean)</b><br>n=5 studies<br>Estimate: -10.5609"], "showlegend": false}],{"paper_bgcolor": "#161b22", "plot_bgcolor": "#161b22", "font": {"color": "#8b949e", "size": 11, "family": "-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif"}, "title": {"text": "5 studies \u00b7 pooled = -10.561  <span style='font-size:10px;color:#8b949e'>marker size \u221d citations</span>", "font": {"color": "#e6edf3", "size": 12}, "x": 0.02, "xanchor": "left"}, "xaxis": {"title": {"text": "Effect Size (as reported by study)", "font": {"size": 10}}, "gridcolor": "#30363d", "showgrid": true, "zeroline": true, "zerolinecolor": "#8b949e", "zerolinewidth": 2, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "yaxis": {"type": "category", "autorange": true, "tickfont": {"size": 11}, "gridcolor": "#30363d", "linecolor": "#30363d"}, "margin": {"t": 50, "b": 55, "l": 230, "r": 40}, "height": 458, "hovermode": "closest", "hoverlabel": {"bgcolor": "#0d1117", "bordercolor": "#30363d", "font": {"color": "#e6edf3", "size": 11}}, "shapes": [{"type": "line", "x0": 0, "x1": 0, "y0": 0, "y1": 1, "xref": "x", "yref": "paper", "line": {"color": "#8b949e", "width": 1.5, "dash": "dot"}}]},{"responsive": true, "displayModeBar": false});
+</script>
+</body></html>

@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Synthesis — Does foreign aid promote economic growth?</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+<style>
+    :root {
+      --bg:#0d1117; --surf:#161b22; --bord:#30363d; --muted:#8b949e;
+      --text:#e6edf3; --blue:#58a6ff; --green:#3fb950; --red:#f85149; --org:#ffa657; --purp:#d2a8ff;
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { background:var(--bg); color:var(--text);
+           font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+           font-size:15px; line-height:1.7; padding-bottom:80px; }
+    .header { background:var(--surf); border-bottom:1px solid var(--bord);
+               padding:28px 48px; display:flex; justify-content:space-between; align-items:center; }
+    .header h1 { font-size:22px; font-weight:800; color:var(--blue); }
+    .header .meta { color:var(--muted); font-size:13px; text-align:right; line-height:1.9; }
+    .question-banner { max-width:1100px; margin:40px auto 0; padding:0 32px; }
+    .question-box { background:var(--surf); border:1px solid var(--bord);
+                     border-left:4px solid var(--blue); border-radius:8px;
+                     padding:20px 24px; }
+    .question-box .label { font-size:11px; color:var(--muted); text-transform:uppercase;
+                            letter-spacing:1px; margin-bottom:6px; }
+    .question-box .q { font-size:20px; font-weight:700; color:var(--text); }
+    .stats-row { max-width:1100px; margin:24px auto 0; padding:0 32px;
+                  display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+    .stat { background:var(--surf); border:1px solid var(--bord); border-radius:8px;
+             padding:18px 20px; text-align:center; }
+    .stat .num { font-size:32px; font-weight:800; color:var(--blue); }
+    .stat .lab { font-size:12px; color:var(--muted); margin-top:4px; }
+    .section { max-width:1100px; margin:40px auto 0; padding:0 32px; }
+    h2 { font-size:17px; font-weight:700; color:var(--blue); padding-bottom:10px;
+          border-bottom:1px solid var(--bord); margin-bottom:18px; }
+    h3 { font-size:14px; font-weight:600; color:var(--text); margin:16px 0 8px; }
+    p { color:var(--muted); margin-bottom:12px; }
+    ul { padding-left:20px; color:var(--muted); }
+    li { margin-bottom:6px; }
+    strong { color:var(--text); }
+    em { color:var(--muted); font-style:italic; }
+    .report-body h2 { font-size:17px; font-weight:700; color:var(--blue);
+                       padding-bottom:10px; border-bottom:1px solid var(--bord);
+                       margin:32px 0 16px; }
+    .report-body h3 { font-size:14px; font-weight:600; color:var(--text);
+                       margin:18px 0 8px; }
+    .report-body p { color:var(--muted); margin-bottom:12px; line-height:1.7; }
+    .report-body ul, .report-body ol { padding-left:22px; color:var(--muted);
+                                        margin-bottom:12px; }
+    .report-body li { margin-bottom:6px; }
+    .alignment-grid { display:grid; grid-template-columns:1fr; gap:10px; }
+    .alignment-card { background:var(--surf); border:1px solid var(--bord);
+                       border-radius:8px; padding:14px 18px;
+                       display:grid; grid-template-columns:auto 1fr; gap:0 16px; }
+    .align-badge { display:inline-block; padding:3px 10px; border-radius:4px;
+                    font-size:11px; font-weight:700; white-space:nowrap; }
+    .align-meta { font-size:12px; color:var(--muted); margin-top:4px; }
+    .align-finding { font-size:13.5px; color:var(--text); margin:6px 0 4px; }
+    .align-explain { font-size:12px; color:var(--muted); font-style:italic; }
+    .data-charts { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; }
+    .chart-card { background:var(--surf); border:1px solid var(--bord); border-radius:8px;
+                   padding:4px; }
+    .chart-badge { display:inline-block; padding:2px 8px; border-radius:4px;
+                    font-size:10px; font-weight:700; margin:6px 10px 2px;
+                    background:rgba(88,166,255,0.15); color:var(--blue); }
+    .chart-badge.wb  { background:rgba(210,168,255,0.15); color:var(--purp); }
+    .chart-badge.bls { background:rgba(255,166,87,0.15);  color:var(--org);  }
+    .chart-meta { padding:6px 12px 10px; font-size:12px; color:var(--muted); }
+    .gap-list { list-style:none; padding:0; }
+    .gap-list li { background:var(--surf); border:1px solid var(--bord);
+                    border-left:3px solid var(--org); border-radius:6px;
+                    padding:10px 14px; margin-bottom:8px; font-size:13px;
+                    color:var(--text); }
+    .pooled-card { max-width:1100px; margin:28px auto 0; padding:0 32px; }
+    .pooled-inner { border-radius:10px; padding:20px 24px;
+                     display:grid; grid-template-columns:auto 1fr; gap:0 24px;
+                     align-items:start; }
+    .pooled-direction { font-size:28px; font-weight:900; letter-spacing:-0.5px; }
+    .pooled-score { font-size:13px; color:var(--muted); margin-top:4px; }
+    .pooled-statement { font-size:14px; color:var(--text); line-height:1.6; }
+    .pooled-breakdown { display:flex; gap:16px; margin-top:10px; flex-wrap:wrap; }
+    .pooled-pill { font-size:11px; padding:3px 10px; border-radius:4px;
+                    font-weight:700; background:rgba(255,255,255,0.06); color:var(--muted); }
+    .effect-sizes { margin-top:10px; font-size:12px; color:var(--muted); }
+    .effect-sizes li { list-style:disc; margin-left:16px; margin-bottom:3px; }
+    .footer { max-width:1100px; margin:60px auto 0; padding:20px 32px 0;
+               border-top:1px solid var(--bord); color:var(--muted);
+               font-size:12px; display:flex; justify-content:space-between; }
+    @media(max-width:800px) {
+      .stats-row { grid-template-columns:repeat(2,1fr); }
+      .data-charts { grid-template-columns:1fr; }
+      .header { flex-direction:column; gap:10px; }
+    }
+    </style>
+</head>
+<body>
+<div class="header">
+  <div>
+    <h1>Synthesis · Economics Research Brief</h1>
+    <div style="color:var(--muted);font-size:13px;margin-top:4px;">
+      Qualitative · Quantitative · QQA Alignment
+    </div>
+  </div>
+  <div class="meta">
+    Model: claude-opus-4-8 · Adaptive Thinking<br>
+    Literature: arXiv · OpenAlex · NBER<br>
+    Data: FRED · World Bank · BLS &nbsp;·&nbsp; synthesis-econ v0.3.0
+  </div>
+</div>
+
+<div class="question-banner">
+  <div class="question-box">
+    <div class="label">Research Question</div>
+    <div class="q">Does foreign aid promote economic growth?</div>
+  </div>
+</div>
+
+<div class="stats-row">
+  <div class="stat"><div class="num">24</div><div class="lab">Papers Retrieved</div></div>
+  <div class="stat"><div class="num">14</div><div class="lab">Claims Extracted</div></div>
+  <div class="stat"><div class="num" style="color:var(--green)">0</div><div class="lab">Data-Supported</div></div>
+  <div class="stat"><div class="num" style="color:var(--red)">0</div><div class="lab">Contradicted by Data</div></div>
+</div>
+<div class="pooled-card"><div class="pooled-inner" style="background:rgba(88,166,255,0.1);border:1px solid #58a6ff44;"><div><div class="pooled-direction" style="color:#58a6ff">NO CLEAR EFFECT</div><div class="pooled-score">Weighted score: +0.00 &nbsp;·&nbsp; 14 claims &nbsp;·&nbsp; 0 high-confidence&nbsp;·&nbsp; Top methods: OLS · meta-analysis · other</div></div><div><div class="pooled-statement">Pooled evidence (no high-confidence of 14 claims via OLS + meta-analysis + other) finds NO CLEAR EFFECT (weighted score +0.00). 3 claims find no effect, 7 positive, 2 negative.</div><div class="pooled-breakdown"><span class="pooled-pill">▲ 7 positive</span><span class="pooled-pill">▼ 2 negative</span><span class="pooled-pill">— 3 no effect</span><span class="pooled-pill">~ 2 ambiguous</span></div></div></div></div><div class="section"><div class="report-body"><h2>1. Research Question</h2>
+</ul><p></p>
+<p><strong>Does foreign aid (official development assistance) causally promote economic growth?</strong> The scope spans aggregate cross-country panels, education-sector aid, and country-specific cases (notably Bangladesh and Sub-Saharan Africa), with related claims on adjacent capital flows (FDI, remittances, foreign debt) that are frequently bundled with aid in the empirical literature.</p>
+</ul><p></p>
+<h2>2. Literature Consensus</h2>
+</ul><p></p>
+<p>There is <strong>no consensus</strong>. The pooled meta-analytic estimate is a weighted score of <strong>+0.00 — a true null</strong>, not a weak positive. Across 14 claims (7 positive, 3 no-effect, 2 negative, 2 ambiguous), <strong>zero are high-confidence</strong>. The dominant methodological approach is OLS (cross-country and panel regression), supplemented by cointegration/time-series ("other"), instrumental variables, and one meta-analysis.</p>
+</ul><p></p>
+<p>The closest thing to a modal finding is <strong>conditional and fragile</strong>: aid appears to help growth only under specific conditions — high government quality, economic freedom, or when disaggregated by sector (e.g., primary-education aid positive; post-primary adverse). The aggregate, unconditional aid→growth relationship is repeatedly estimated as <strong>statistically insignificant</strong>. The strongest claims rest on the weakest identification: most "positive" findings are OLS correlations or long-run cointegration relationships, neither of which establishes causation.</p>
+</ul><p></p>
+<h2>3. Where the Literature Disagrees</h2>
+</ul><p></p>
+<p>The central fault line is the <strong>Burnside-Dollar "aid works in good-policy environments" thesis</strong>, explicitly flagged as <strong>contested</strong>: adding new data overturns the original result, and the aid-policy-growth interaction is not robust. This is the canonical disagreement in the field and it remains live.</p>
+</ul><p></p>
+<p>Three methodological fault lines:</p>
+<li><strong>Aggregation</strong>: Aggregate aid shows null effects, but disaggregation (primary vs. post-primary education aid; loans/food aid vs. grants) flips signs. The "no effect" may mask offsetting positive and negative components.</li>
+<li><strong>Identification</strong>: OLS-correlational claims (positive) versus IV/causal claims (mixed) versus time-series cointegration (positive long-run, null short-run). The short-run/long-run split in the Bangladesh studies is unresolved.</li>
+<li><strong>Endogeneity direction</strong>: One strand argues <em>reduced</em> reliance on foreign capital associates with <em>higher</em> growth in nonindustrial countries — implying reverse causality or aid-dependence harm, directly contradicting the positive-effect camp.</li>
+</ul><p></p>
+<h2>4. What the Data Shows</h2>
+</ul><p></p>
+<p><strong>Blunt caveat: the empirical series provided are overwhelmingly US-domestic macro indicators and cannot directly test an aid→growth question centered on developing countries.</strong> This is a coverage mismatch, and every literature claim above is correctly flagged INSUFFICIENT_DATA for this reason.</p>
+</ul><p></p>
+<p>The two relevant global series:</p>
+<li><strong>Net ODA received (% of GNI), global: 0.177%–0.244%, latest 0.244% (2004–2023).</strong> Aid as a share of global income is tiny and range-bound — it has risen modestly but remains under a quarter of one percent of GNI. This low magnitude is itself informative: even a real positive effect would be hard to detect against macro noise.</li>
+<li><strong>Global GDP growth (annual %): −2.899% to 6.413%, latest 2.872% (2005–2024).</strong> Growth is dominated by the 2009 and 2020 contractions and subsequent recoveries — i.e., driven by financial and pandemic shocks, not by aid flows.</li>
+</ul><p></p>
+<p>With ODA flat-to-slightly-rising and growth dominated by global business-cycle shocks, <strong>the data show no visible co-movement</strong> that would corroborate a strong aid→growth channel. The US series (Real GDP rising to $24.2T, federal debt to $38.5T, CPI to 332, real median income to $83,730) are irrelevant to the aid question and should not be over-interpreted. They confirm nothing about aid effectiveness.</p>
+</ul><p></p>
+<h2>5. Theory vs. Data: The Alignment (QQA Summary)</h2>
+</ul><p></p>
+<p>| Claim | Direction | Data Verdict |</p>
+<p>|---|---|---|</p>
+<p>| Aid+FDI+remittances → growth, Bangladesh (long-run) | positive | <strong>INSUFFICIENT</strong> — no Bangladesh time series |</p>
+<p>| Foreign Capital Index → growth, Bangladesh | positive | <strong>INSUFFICIENT</strong> — no index series |</p>
+<p>| Foreign debt → GDP growth (IV, 50 countries) | positive | <strong>INSUFFICIENT</strong> — no panel data |</p>
+<p>| Post-disaster aid → entrepreneurship (85 countries) | positive | <strong>INSUFFICIENT</strong> — no cross-country data |</p>
+<p>| Institutional quality moderates aid effectiveness | positive | <strong>INSUFFICIENT</strong> — no interaction data |</p>
+<p>| FDI → growth, South Asia | no_effect | <strong>INSUFFICIENT</strong> — no SAARC data |</p>
+<p>| Primary-education aid → growth, SSA | positive | <strong>INSUFFICIENT</strong> — no sector-aid data |</p>
+<p>| Post-primary education aid → growth, SSA | negative | <strong>INSUFFICIENT</strong> — no sector-aid data |</p>
+<p>| Aid×good-policy (Burnside-Dollar) | ambiguous/contested | <strong>INSUFFICIENT & UNRESOLVED</strong> |</p>
+<p>| Aggregate aid → growth, global | no_effect | <strong>Weakly consistent</strong> with flat ODA / shock-driven growth |</p>
+<p>| International trade → growth | positive | <strong>INSUFFICIENT</strong> — no trade series |</p>
+<p>| Aggregate foreign resources → growth, Bangladesh | no_effect | <strong>INSUFFICIENT</strong> |</p>
+<p>| Foreign capital reliance → growth (negative) | negative | <strong>INSUFFICIENT</strong> |</p>
+<p>| FDI spillovers to domestic firms (meta) | ambiguous | <strong>INSUFFICIENT</strong> |</p>
+</ul><p></p>
+<p><strong>Bottom line: 13 of 14 claims have no matching empirical data.</strong> The only claim weakly compatible with the available global series is the <strong>null/no-effect</strong> finding — and even that is circumstantial, not a test. <strong>No claim is contradicted by data because no claim was actually testable with the data on hand.</strong> The honest verdict is that this exercise has near-total empirical coverage failure relative to the literature.</p>
+</ul><p></p>
+<h2>6. Research Gaps (The Gap Matrix)</h2>
+</ul><p></p>
+<p>The single largest gap is <strong>causal identification</strong>: the literature is dominated by OLS and cointegration, both vulnerable to endogeneity (aid flows to poor or crisis-hit countries, biasing estimates downward). Specifically flagged:</p>
+</ul><p></p>
+<li><strong>No difference-in-differences (DiD) study exists for ANY geography</strong> in this corpus — not Bangladesh, not SSA, not the 50-country or 85-country panels, not global.</li>
+<li><strong>No high-confidence claim exists at all</strong> — the entire evidence base is moderate-confidence or contested.</li>
+<li><strong>Sector-level disaggregation</strong> (primary vs. post-primary aid) is established by only OLS in one SSA sample — unreplicated and unidentified.</li>
+<li><strong>The aid-dependence threshold</strong> (excessive aid harms growth) is asserted but never estimated with a nonlinearity-capable design.</li>
+<li><strong>Temporal coverage</strong>: ODA data begins 2004 and growth 2005 — no long pre-period for the global series, limiting any event-study around aid surges.</li>
+</ul><p></p>
+<h2>7. Suggested Research Directions</h2>
+</ul><p></p>
+<p>1. <strong>DiD / event-study on aid disbursement shocks.</strong> Exploit exogenous donor-side budget shocks (e.g., a donor's fiscal crisis or government change that cuts aid for reasons unrelated to recipient growth) as the treatment. Compare recipient growth trajectories pre/post. <strong>Resolves</strong>: the field's complete absence of DiD identification and the core endogeneity problem.</p>
+</ul><p></p>
+<p>2. <strong>Sector-disaggregated IV replication across geographies.</strong> Take the SSA primary-vs-post-primary education-aid finding and test it out-of-sample in South Asia and Latin America using an instrument (e.g., donor sectoral budget shares interacted with recipient baseline aid exposure, Nunn-Qian style). <strong>Resolves</strong>: whether the sign-flip by sector is real or an SSA artifact.</p>
+</ul><p></p>
+<p>3. <strong>Settle Burnside-Dollar with modern methods.</strong> Re-estimate the aid×policy interaction using machine-learning-selected controls and a regression-discontinuity on aid-eligibility thresholds (e.g., IDA income cutoffs). <strong>Resolves</strong>: the one explicitly contested claim in the corpus.</p>
+</ul><p></p>
+<p>4. <strong>Nonlinear aid-dependence threshold model.</strong> Estimate a panel threshold regression (Hansen) to test whether aid/GNI above some level harms growth. The global ODA series (0.18–0.24% of GNI) shows aid is small in aggregate but concentrated in some recipients — exploit that cross-sectional variance. <strong>Resolves</strong>: the "excessive aid harms growth" assertion that is currently untested.</p>
+</ul><p></p>
+<p>5. <strong>Reconcile short-run null / long-run positive via panel error-correction.</strong> The Bangladesh cointegration claims are single-country and weak. A multi-country panel ARDL/PMG estimator would separate transitory from permanent aid effects with more power. <strong>Resolves</strong>: the unexplained short-run/long-run divergence.</p>
+</ul><p></p>
+<h2>8. One-Paragraph Research Memo</h2>
+</ul><p></p>
+<p>The state of knowledge on whether foreign aid promotes growth is a <strong>genuine null with high dispersion</strong>: across 14 claims the weighted effect is exactly zero, no claim reaches high confidence, and the field's flagship result (Burnside-Dollar's aid-works-under-good-policy) is contested and overturned by newer data. The evidence base is methodologically thin — dominated by OLS correlations and single-country cointegration, with <strong>zero difference-in-differences studies in any geography</strong> and pervasive unaddressed endogeneity, since aid flows toward poor and crisis-affected economies. The available empirical series cannot test the question (US macro indicators are irrelevant; the only on-point global series — ODA at ~0.24% of GNI and shock-dominated GDP growth — show no co-movement), so the binding constraint is not data quantity but <strong>causal identification</strong>. The single most promising next study is a <strong>donor-side-shock difference-in-differences or event-study design</strong> that isolates plausibly exogenous variation in aid, ideally paired with sectoral disaggregation to test whether positive (primary-education) and negative (post-primary, aid-dependence) components are masking each other inside the aggregate null. Until such identification exists, the defensible conclusion is that foreign aid has <strong>no reliably demonstrated aggregate growth effect</strong>, while remaining conditionally promising in specific sectors and institutional contexts that the current literature has not credibly identified.</p></div></div><div class="section"><h2>QQA Alignment — Theory vs. Data</h2><div class="alignment-grid"><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">other · Bangladesh · 1976-2021</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>Official development assistance (foreign aid) → Economic growth (GDP)</strong>
+     &nbsp;<span style="color:#3fb950">(positive)</span></div>
+    <div class="align-explain">Foreign aid, along with FDI and remittances, positively affects Bangladesh's economic growth in the long run but has no short-run causal effect.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ No matching time-series data on Bangladeshi aid, FDI, remittances, and GDP was available to test the claimed long-run positive linkage, so the asserted cointegration relationship can be neither confirmed nor refuted statistically here.</div>
+  </div>
+</div><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">other · Bangladesh · 1976-2021</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>Foreign capital (FDI, remittances, aid combined / FCDI) → Economic growth</strong>
+     &nbsp;<span style="color:#3fb950">(positive)</span></div>
+    <div class="align-explain">The Foreign Capital Depthless Index shows a positive long-run relationship with economic growth in Bangladesh.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ Without an underlying data series for the Foreign Capital Depthless Index and GDP, the purported positive long-run association cannot be independently verified or assigned a slope, correlation, or p-value.</div>
+  </div>
+</div><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">IV · 50 countries (global) · 1997-2015</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>Foreign debt → GDP growth</strong>
+     &nbsp;<span style="color:#3fb950">(positive)</span></div>
+    <div class="align-explain">Foreign debt causally raises GDP growth by increasing investment, with stronger effects in OECD than non-OECD countries.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ No data series matched this instrumental-variables claim, so the asserted causal effect of foreign debt on GDP growth (and its larger OECD-versus-non-OECD magnitude) remains untested in this exercise.</div>
+  </div>
+</div><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">OLS · 85 countries · 2006-2016</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>Foreign aid (post-disaster) → Entrepreneurship activity</strong>
+     &nbsp;<span style="color:#3fb950">(positive)</span></div>
+    <div class="align-explain">Foreign aid is positively associated with entrepreneurship but mainly in countries with high quality government, and it attenuates the negative effect of disasters.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ No matching cross-country data on post-disaster aid and entrepreneurship was available, so the OLS finding of a conditional positive association cannot be reproduced or quantified here.</div>
+  </div>
+</div><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">OLS · 85 countries · 2006-2016</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>Institutional quality (government quality, economic freedom) → Effectiveness of foreign aid on entrepreneurship</strong>
+     &nbsp;<span style="color:#3fb950">(positive)</span></div>
+    <div class="align-explain">The growth-supporting effect of foreign aid depends crucially on the quality of government and economic freedom.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ Lacking data on aid, institutional quality, and their interaction, we cannot statistically confirm that government quality and economic freedom moderate aid's effectiveness.</div>
+  </div>
+</div><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">OLS · South Asia (SAARC) · 1980-2017</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>Foreign direct investment → Economic growth</strong>
+     &nbsp;<span style="color:#8b949e">(no_effect)</span></div>
+    <div class="align-explain">FDI shows a positive but statistically insignificant correlation with growth in South Asian countries, while domestic investment and human capital are significant drivers.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ No South Asian FDI-and-growth series was available, so the claimed positive-but-insignificant FDI correlation (and the significance of domestic investment and human capital) cannot be checked against any p-value.</div>
+  </div>
+</div><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">OLS · Sub-Saharan Africa (38 countries) · 1990-2004</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>Foreign aid in primary education → Economic growth</strong>
+     &nbsp;<span style="color:#3fb950">(positive)</span></div>
+    <div class="align-explain">Aid in primary education has a positive and significant effect on growth, while aid in post-primary education has an adverse or insignificant effect.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ Without education-aid and growth data, the asserted positive and significant effect of primary-education aid on growth cannot be empirically validated here.</div>
+  </div>
+</div><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">OLS · Sub-Saharan Africa (38 countries) · 1990-2004</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>Foreign aid in post-primary education → Economic growth</strong>
+     &nbsp;<span style="color:#f85149">(negative)</span></div>
+    <div class="align-explain">Aid allocated to post-primary education has an adverse or at best no significant impact on growth.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ No data series matched post-primary education aid and growth, so the claimed adverse effect cannot be tested or assigned a coefficient sign and significance.</div>
+  </div>
+</div><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">OLS · developing countries (global) · 1970-1997</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>Foreign aid (interacted with good policy) → Economic growth</strong>
+     &nbsp;<span style="color:#8b949e">(ambiguous)</span></div>
+    <div class="align-explain">Adding new data overturns the Burnside-Dollar result that aid raises growth in good-policy environments, suggesting the aid-policy-growth link is not robust.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ Lacking the aid-policy-growth interaction data, we cannot evaluate whether the Burnside-Dollar good-policy result holds or breaks down, leaving the ambiguity unresolved by statistics.</div>
+  </div>
+</div><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">OLS · global · circa 2000s</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>Foreign aid → Economic growth</strong>
+     &nbsp;<span style="color:#8b949e">(no_effect)</span></div>
+    <div class="align-explain">Foreign aid is not significantly related to economic growth in many cases and excessive aid dependence may harm growth, whereas international trade promotes growth.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ No matching aid-and-growth data was available, so the claimed insignificant aid-growth relationship and harmful aid dependence cannot be confirmed with a correlation or p-value.</div>
+  </div>
+</div><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">OLS · global · circa 2000s</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>International trade → Economic growth</strong>
+     &nbsp;<span style="color:#3fb950">(positive)</span></div>
+    <div class="align-explain">International trade is an important factor that promotes economic growth in many countries, unlike foreign aid.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ Without trade-and-growth data, the asserted positive role of international trade in promoting growth cannot be independently estimated or tested here.</div>
+  </div>
+</div><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">other · Bangladesh · 1972-1988</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>Foreign aid (aggregate) → Economic growth</strong>
+     &nbsp;<span style="color:#8b949e">(no_effect)</span></div>
+    <div class="align-explain">Highly aggregated foreign resources show no significant contribution to growth, with domestic resources exerting a stronger impact, though loans and food aid are more effective than grants.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ No data series matched aggregate foreign resources and growth, so the claimed null effect (with domestic resources stronger and loans/food aid more effective than grants) cannot be statistically reproduced.</div>
+  </div>
+</div><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">OLS · nonindustrial/developing countries · long-run (cross-section)</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>Foreign capital inflows → Economic growth</strong>
+     &nbsp;<span style="color:#f85149">(negative)</span></div>
+    <div class="align-explain">Reduced reliance on foreign capital is associated with higher growth in nonindustrial countries, with no evidence that foreign capital inflows directly boost growth.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ Lacking foreign-capital-inflow and growth data for nonindustrial countries, the claimed negative association between capital reliance and growth cannot be verified with any slope or significance level.</div>
+  </div>
+</div><div class="alignment-card">
+  <div>
+    <span class="align-badge" style="background:#8b949e22;color:#8b949e">Insufficient Data</span>
+    <div class="align-meta">meta-analysis · developing, developed and transition economies · unclear</div>
+  </div>
+  <div>
+    <div class="align-finding"><strong>Foreign direct investment → Productivity spillovers to domestic firms</strong>
+     &nbsp;<span style="color:#8b949e">(ambiguous)</span></div>
+    <div class="align-explain">Robust empirical support for positive spillovers from FDI to domestic firms is at best mixed.</div>
+    <div class="align-explain" style="margin-top:4px;color:#8b949e">↳ No underlying data matched this FDI-spillover meta-analysis, so the conclusion of mixed/ambiguous evidence on productivity spillovers cannot be re-tested in this exercise.</div>
+  </div>
+</div></div></div><div class="section"><h2>Empirical Data — FRED · World Bank · BLS</h2><div class="data-charts"><div class="chart-card"><span class="chart-badge">FRED</span><div id="chart_0" style="width:100%;border-radius:8px;overflow:hidden"></div><div class="chart-meta">GDPC1 &nbsp;·&nbsp; Latest: <strong>24152.656 Bil. of Chn. 2017 $</strong> &nbsp;·&nbsp; 2000–2026</div></div>
+<div class="chart-card"><span class="chart-badge">FRED</span><div id="chart_1" style="width:100%;border-radius:8px;overflow:hidden"></div><div class="chart-meta">MEHOINUSA672N &nbsp;·&nbsp; Latest: <strong>83730.0 2024 C-CPI-U $</strong> &nbsp;·&nbsp; 2000–2024</div></div>
+<div class="chart-card"><span class="chart-badge">FRED</span><div id="chart_2" style="width:100%;border-radius:8px;overflow:hidden"></div><div class="chart-meta">GFDEBTN &nbsp;·&nbsp; Latest: <strong>38514009.0 Mil. of $</strong> &nbsp;·&nbsp; 2000–2025</div></div>
+<div class="chart-card"><span class="chart-badge">FRED</span><div id="chart_3" style="width:100%;border-radius:8px;overflow:hidden"></div><div class="chart-meta">CPIAUCSL &nbsp;·&nbsp; Latest: <strong>332.407 Index 1982-1984=100</strong> &nbsp;·&nbsp; 2000–2026</div></div>
+<div class="chart-card"><span class="chart-badge wb">World Bank</span><div id="chart_4" style="width:100%;border-radius:8px;overflow:hidden"></div><div class="chart-meta">WB:DT.ODA.ODAT.GN.ZS &nbsp;·&nbsp; Latest: <strong>0.244 %</strong> &nbsp;·&nbsp; 2004–2023</div></div>
+<div class="chart-card"><span class="chart-badge wb">World Bank</span><div id="chart_5" style="width:100%;border-radius:8px;overflow:hidden"></div><div class="chart-meta">WB:NY.GDP.MKTP.KD.ZG &nbsp;·&nbsp; Latest: <strong>2.872 %</strong> &nbsp;·&nbsp; 2005–2024</div></div>
+<div class="chart-card"><span class="chart-badge bls">BLS</span><div id="chart_6" style="width:100%;border-radius:8px;overflow:hidden"></div><div class="chart-meta">BLS:LNS14000012 &nbsp;·&nbsp; Latest: <strong>12.3 percent</strong> &nbsp;·&nbsp; 2005–2024</div></div>
+<div class="chart-card"><span class="chart-badge bls">BLS</span><div id="chart_7" style="width:100%;border-radius:8px;overflow:hidden"></div><div class="chart-meta">BLS:CES0500000007 &nbsp;·&nbsp; Latest: <strong>33.7 index</strong> &nbsp;·&nbsp; 2005–2024</div></div>
+<div class="chart-card"><span class="chart-badge bls">BLS</span><div id="chart_8" style="width:100%;border-radius:8px;overflow:hidden"></div><div class="chart-meta">BLS:CES0500000008 &nbsp;·&nbsp; Latest: <strong>30.66 $/hour</strong> &nbsp;·&nbsp; 2005–2024</div></div></div></div><div class="section"><h2>Research Gap Matrix</h2><ul class="gap-list"><li>No DiD study found for nonindustrial/developing countries</li><li>No DiD study found for global</li><li>No DiD study found for 50 countries (global)</li><li>No DiD study found for developing, developed and transition economies</li><li>No DiD study found for 85 countries</li><li>No DiD study found for Bangladesh</li><li>No DiD study found for Sub-Saharan Africa (38 countries)</li><li>No DiD study found for South Asia (SAARC)</li></ul></div><div class="footer">
+  <span>Synthesis v0.1.0 · claude-opus-4-8 · arXiv · OpenAlex · NBER · FRED · World Bank · BLS</span>
+  <span>For research purposes — verify all claims independently</span>
+</div>
+<script>
+Plotly.newPlot("chart_0",[{"x": ["2000-01-01", "2000-04-01", "2000-07-01", "2000-10-01", "2001-01-01", "2001-04-01", "2001-07-01", "2001-10-01", "2002-01-01", "2002-04-01", "2002-07-01", "2002-10-01", "2003-01-01", "2003-04-01", "2003-07-01", "2003-10-01", "2004-01-01", "2004-04-01", "2004-07-01", "2004-10-01", "2005-01-01", "2005-04-01", "2005-07-01", "2005-10-01", "2006-01-01", "2006-04-01", "2006-07-01", "2006-10-01", "2007-01-01", "2007-04-01", "2007-07-01", "2007-10-01", "2008-01-01", "2008-04-01", "2008-07-01", "2008-10-01", "2009-01-01", "2009-04-01", "2009-07-01", "2009-10-01", "2010-01-01", "2010-04-01", "2010-07-01", "2010-10-01", "2011-01-01", "2011-04-01", "2011-07-01", "2011-10-01", "2012-01-01", "2012-04-01", "2012-07-01", "2012-10-01", "2013-01-01", "2013-04-01", "2013-07-01", "2013-10-01", "2014-01-01", "2014-04-01", "2014-07-01", "2014-10-01", "2015-01-01", "2015-04-01", "2015-07-01", "2015-10-01", "2016-01-01", "2016-04-01", "2016-07-01", "2016-10-01", "2017-01-01", "2017-04-01", "2017-07-01", "2017-10-01", "2018-01-01", "2018-04-01", "2018-07-01", "2018-10-01", "2019-01-01", "2019-04-01", "2019-07-01", "2019-10-01", "2020-01-01", "2020-04-01", "2020-07-01", "2020-10-01", "2021-01-01", "2021-04-01", "2021-07-01", "2021-10-01", "2022-01-01", "2022-04-01", "2022-07-01", "2022-10-01", "2023-01-01", "2023-04-01", "2023-07-01", "2023-10-01", "2024-01-01", "2024-04-01", "2024-07-01", "2024-10-01", "2025-01-01", "2025-04-01", "2025-07-01", "2025-10-01", "2026-01-01"], "y": [13878.147, 14130.908, 14145.312, 14229.765, 14183.12, 14271.694, 14214.516, 14253.574, 14372.785, 14460.848, 14519.633, 14537.58, 14614.141, 14743.567, 14988.782, 15162.76, 15248.68, 15366.85, 15512.619, 15670.88, 15844.727, 15922.782, 16047.587, 16136.734, 16353.835, 16396.151, 16420.738, 16561.866, 16611.69, 16713.314, 16809.587, 16915.191, 16843.003, 16943.291, 16854.295, 16485.35, 16298.262, 16269.145, 16326.281, 16502.754, 16582.71, 16743.162, 16872.266, 16960.864, 16920.632, 17035.114, 17031.313, 17222.583, 17367.01, 17444.525, 17469.65, 17489.852, 17662.4, 17709.671, 17860.45, 18016.147, 17953.974, 18185.911, 18406.941, 18500.031, 18666.621, 18782.243, 18857.418, 18892.206, 19001.69, 19062.709, 19197.938, 19304.352, 19398.343, 19506.949, 19660.766, 19882.352, 20044.077, 20150.476, 20276.154, 20304.874, 20431.641, 20602.275, 20843.322, 20985.448, 20709.212, 19077.992, 20558.879, 20791.917, 21082.134, 21440.929, 21617.828, 21988.737, 21932.71, 21967.045, 22125.625, 22278.345, 22439.607, 22580.499, 22840.989, 23033.78, 23082.119, 23286.508, 23478.57, 23586.542, 23548.21, 23770.976, 24026.834, 24055.749, 24152.656], "type": "scatter", "mode": "lines", "fill": "tozeroy", "fillcolor": "rgba(88,166,255,0.08)", "line": {"color": "#58a6ff", "width": 1.8}, "hovertemplate": "%{x}<br>Bil. of Chn. 2017 $: %{y:.3f}<extra></extra>", "name": "GDPC1"}],{"paper_bgcolor": "#161b22", "plot_bgcolor": "#161b22", "font": {"color": "#8b949e", "size": 11, "family": "-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif"}, "title": {"text": "Real Gross Domestic Product", "font": {"color": "#e6edf3", "size": 12}, "x": 0.02, "xanchor": "left"}, "xaxis": {"gridcolor": "#30363d", "showgrid": true, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "yaxis": {"gridcolor": "#30363d", "showgrid": true, "title": {"text": "Bil. of Chn. 2017 $", "font": {"size": 10}}, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "margin": {"t": 50, "b": 40, "l": 60, "r": 16}, "height": 260, "hovermode": "x unified", "hoverlabel": {"bgcolor": "#0d1117", "bordercolor": "#30363d", "font": {"color": "#e6edf3", "size": 11}}},{"responsive": true, "displayModeBar": false});
+Plotly.newPlot("chart_1",[{"x": ["2000-01-01", "2001-01-01", "2002-01-01", "2003-01-01", "2004-01-01", "2005-01-01", "2006-01-01", "2007-01-01", "2008-01-01", "2009-01-01", "2010-01-01", "2011-01-01", "2012-01-01", "2013-01-01", "2014-01-01", "2015-01-01", "2016-01-01", "2017-01-01", "2018-01-01", "2019-01-01", "2020-01-01", "2021-01-01", "2022-01-01", "2023-01-01", "2024-01-01"], "y": [71790.0, 70610.0, 70040.0, 70080.0, 69970.0, 71060.0, 71850.0, 73010.0, 70520.0, 70070.0, 68420.0, 67410.0, 67400.0, 69950.0, 69060.0, 72790.0, 75380.0, 76710.0, 77700.0, 83260.0, 81580.0, 81270.0, 79500.0, 82690.0, 83730.0], "type": "scatter", "mode": "lines", "fill": "tozeroy", "fillcolor": "rgba(88,166,255,0.08)", "line": {"color": "#58a6ff", "width": 1.8}, "hovertemplate": "%{x}<br>2024 C-CPI-U $: %{y:.3f}<extra></extra>", "name": "MEHOINUSA672N"}],{"paper_bgcolor": "#161b22", "plot_bgcolor": "#161b22", "font": {"color": "#8b949e", "size": 11, "family": "-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif"}, "title": {"text": "Real Median Household Income in the United States", "font": {"color": "#e6edf3", "size": 12}, "x": 0.02, "xanchor": "left"}, "xaxis": {"gridcolor": "#30363d", "showgrid": true, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "yaxis": {"gridcolor": "#30363d", "showgrid": true, "title": {"text": "2024 C-CPI-U $", "font": {"size": 10}}, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "margin": {"t": 50, "b": 40, "l": 60, "r": 16}, "height": 260, "hovermode": "x unified", "hoverlabel": {"bgcolor": "#0d1117", "bordercolor": "#30363d", "font": {"color": "#e6edf3", "size": 11}}},{"responsive": true, "displayModeBar": false});
+Plotly.newPlot("chart_2",[{"x": ["2000-01-01", "2000-04-01", "2000-07-01", "2000-10-01", "2001-01-01", "2001-04-01", "2001-07-01", "2001-10-01", "2002-01-01", "2002-04-01", "2002-07-01", "2002-10-01", "2003-01-01", "2003-04-01", "2003-07-01", "2003-10-01", "2004-01-01", "2004-04-01", "2004-07-01", "2004-10-01", "2005-01-01", "2005-04-01", "2005-07-01", "2005-10-01", "2006-01-01", "2006-04-01", "2006-07-01", "2006-10-01", "2007-01-01", "2007-04-01", "2007-07-01", "2007-10-01", "2008-01-01", "2008-04-01", "2008-07-01", "2008-10-01", "2009-01-01", "2009-04-01", "2009-07-01", "2009-10-01", "2010-01-01", "2010-04-01", "2010-07-01", "2010-10-01", "2011-01-01", "2011-04-01", "2011-07-01", "2011-10-01", "2012-01-01", "2012-04-01", "2012-07-01", "2012-10-01", "2013-01-01", "2013-04-01", "2013-07-01", "2013-10-01", "2014-01-01", "2014-04-01", "2014-07-01", "2014-10-01", "2015-01-01", "2015-04-01", "2015-07-01", "2015-10-01", "2016-01-01", "2016-04-01", "2016-07-01", "2016-10-01", "2017-01-01", "2017-04-01", "2017-07-01", "2017-10-01", "2018-01-01", "2018-04-01", "2018-07-01", "2018-10-01", "2019-01-01", "2019-04-01", "2019-07-01", "2019-10-01", "2020-01-01", "2020-04-01", "2020-07-01", "2020-10-01", "2021-01-01", "2021-04-01", "2021-07-01", "2021-10-01", "2022-01-01", "2022-04-01", "2022-07-01", "2022-10-01", "2023-01-01", "2023-04-01", "2023-07-01", "2023-10-01", "2024-01-01", "2024-04-01", "2024-07-01", "2024-10-01", "2025-01-01", "2025-04-01", "2025-07-01", "2025-10-01"], "y": [5773392.0, 5685938.0, 5674179.0, 5662216.0, 5773740.0, 5726815.0, 5807464.0, 5943439.0, 6006032.0, 6126469.0, 6228236.0, 6405707.0, 6460776.0, 6670121.0, 6783320.0, 6997964.0, 7131068.0, 7274335.0, 7379053.0, 7596143.0, 7776939.0, 7836496.0, 7932710.0, 8170413.0, 8371156.0, 8420042.0, 8506974.0, 8680224.0, 8849665.0, 8867677.0, 9007653.0, 9229172.0, 9437594.0, 9492006.0, 10024725.0, 10699805.0, 11126941.0, 11545275.0, 11909828.0, 12311349.0, 12773123.0, 13201792.0, 13561622.0, 14025215.0, 14270114.0, 14343087.0, 14790340.0, 15222940.0, 15606518.0, 15855037.0, 16066240.0, 16432730.0, 16771381.0, 16738320.0, 16738180.0, 17156119.0, 17601227.0, 17632606.0, 17824071.0, 18141444.0, 18152056.0, 18151998.0, 18150618.0, 18922179.0, 19264939.0, 19381591.0, 19573445.0, 19976827.0, 19846420.0, 19844554.0, 20244900.0, 20492747.0, 21089643.0, 21195070.0, 21516058.0, 21974096.0, 22027880.0, 22023283.0, 22719402.0, 23201380.0, 23223813.0, 26477241.0, 26945391.0, 27747798.0, 28132570.0, 28529436.0, 28428919.0, 29617215.0, 30400960.0, 30568582.0, 30928912.0, 31419689.0, 31458438.0, 32332274.0, 33167334.0, 34001494.0, 34586533.0, 34831634.0, 35464674.0, 36218605.0, 36214309.5208, 36211469.0, 37637552.5956, 38514009.0], "type": "scatter", "mode": "lines", "fill": "tozeroy", "fillcolor": "rgba(88,166,255,0.08)", "line": {"color": "#58a6ff", "width": 1.8}, "hovertemplate": "%{x}<br>Mil. of $: %{y:.3f}<extra></extra>", "name": "GFDEBTN"}],{"paper_bgcolor": "#161b22", "plot_bgcolor": "#161b22", "font": {"color": "#8b949e", "size": 11, "family": "-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif"}, "title": {"text": "Federal Debt: Total Public Debt", "font": {"color": "#e6edf3", "size": 12}, "x": 0.02, "xanchor": "left"}, "xaxis": {"gridcolor": "#30363d", "showgrid": true, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "yaxis": {"gridcolor": "#30363d", "showgrid": true, "title": {"text": "Mil. of $", "font": {"size": 10}}, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "margin": {"t": 50, "b": 40, "l": 60, "r": 16}, "height": 260, "hovermode": "x unified", "hoverlabel": {"bgcolor": "#0d1117", "bordercolor": "#30363d", "font": {"color": "#e6edf3", "size": 11}}},{"responsive": true, "displayModeBar": false});
+Plotly.newPlot("chart_3",[{"x": ["2000-01-01", "2000-02-01", "2000-03-01", "2000-04-01", "2000-05-01", "2000-06-01", "2000-07-01", "2000-08-01", "2000-09-01", "2000-10-01", "2000-11-01", "2000-12-01", "2001-01-01", "2001-02-01", "2001-03-01", "2001-04-01", "2001-05-01", "2001-06-01", "2001-07-01", "2001-08-01", "2001-09-01", "2001-10-01", "2001-11-01", "2001-12-01", "2002-01-01", "2002-02-01", "2002-03-01", "2002-04-01", "2002-05-01", "2002-06-01", "2002-07-01", "2002-08-01", "2002-09-01", "2002-10-01", "2002-11-01", "2002-12-01", "2003-01-01", "2003-02-01", "2003-03-01", "2003-04-01", "2003-05-01", "2003-06-01", "2003-07-01", "2003-08-01", "2003-09-01", "2003-10-01", "2003-11-01", "2003-12-01", "2004-01-01", "2004-02-01", "2004-03-01", "2004-04-01", "2004-05-01", "2004-06-01", "2004-07-01", "2004-08-01", "2004-09-01", "2004-10-01", "2004-11-01", "2004-12-01", "2005-01-01", "2005-02-01", "2005-03-01", "2005-04-01", "2005-05-01", "2005-06-01", "2005-07-01", "2005-08-01", "2005-09-01", "2005-10-01", "2005-11-01", "2005-12-01", "2006-01-01", "2006-02-01", "2006-03-01", "2006-04-01", "2006-05-01", "2006-06-01", "2006-07-01", "2006-08-01", "2006-09-01", "2006-10-01", "2006-11-01", "2006-12-01", "2007-01-01", "2007-02-01", "2007-03-01", "2007-04-01", "2007-05-01", "2007-06-01", "2007-07-01", "2007-08-01", "2007-09-01", "2007-10-01", "2007-11-01", "2007-12-01", "2008-01-01", "2008-02-01", "2008-03-01", "2008-04-01", "2008-05-01", "2008-06-01", "2008-07-01", "2008-08-01", "2008-09-01", "2008-10-01", "2008-11-01", "2008-12-01", "2009-01-01", "2009-02-01", "2009-03-01", "2009-04-01", "2009-05-01", "2009-06-01", "2009-07-01", "2009-08-01", "2009-09-01", "2009-10-01", "2009-11-01", "2009-12-01", "2010-01-01", "2010-02-01", "2010-03-01", "2010-04-01", "2010-05-01", "2010-06-01", "2010-07-01", "2010-08-01", "2010-09-01", "2010-10-01", "2010-11-01", "2010-12-01", "2011-01-01", "2011-02-01", "2011-03-01", "2011-04-01", "2011-05-01", "2011-06-01", "2011-07-01", "2011-08-01", "2011-09-01", "2011-10-01", "2011-11-01", "2011-12-01", "2012-01-01", "2012-02-01", "2012-03-01", "2012-04-01", "2012-05-01", "2012-06-01", "2012-07-01", "2012-08-01", "2012-09-01", "2012-10-01", "2012-11-01", "2012-12-01", "2013-01-01", "2013-02-01", "2013-03-01", "2013-04-01", "2013-05-01", "2013-06-01", "2013-07-01", "2013-08-01", "2013-09-01", "2013-10-01", "2013-11-01", "2013-12-01", "2014-01-01", "2014-02-01", "2014-03-01", "2014-04-01", "2014-05-01", "2014-06-01", "2014-07-01", "2014-08-01", "2014-09-01", "2014-10-01", "2014-11-01", "2014-12-01", "2015-01-01", "2015-02-01", "2015-03-01", "2015-04-01", "2015-05-01", "2015-06-01", "2015-07-01", "2015-08-01", "2015-09-01", "2015-10-01", "2015-11-01", "2015-12-01", "2016-01-01", "2016-02-01", "2016-03-01", "2016-04-01", "2016-05-01", "2016-06-01", "2016-07-01", "2016-08-01", "2016-09-01", "2016-10-01", "2016-11-01", "2016-12-01", "2017-01-01", "2017-02-01", "2017-03-01", "2017-04-01", "2017-05-01", "2017-06-01", "2017-07-01", "2017-08-01", "2017-09-01", "2017-10-01", "2017-11-01", "2017-12-01", "2018-01-01", "2018-02-01", "2018-03-01", "2018-04-01", "2018-05-01", "2018-06-01", "2018-07-01", "2018-08-01", "2018-09-01", "2018-10-01", "2018-11-01", "2018-12-01", "2019-01-01", "2019-02-01", "2019-03-01", "2019-04-01", "2019-05-01", "2019-06-01", "2019-07-01", "2019-08-01", "2019-09-01", "2019-10-01", "2019-11-01", "2019-12-01", "2020-01-01", "2020-02-01", "2020-03-01", "2020-04-01", "2020-05-01", "2020-06-01", "2020-07-01", "2020-08-01", "2020-09-01", "2020-10-01", "2020-11-01", "2020-12-01", "2021-01-01", "2021-02-01", "2021-03-01", "2021-04-01", "2021-05-01", "2021-06-01", "2021-07-01", "2021-08-01", "2021-09-01", "2021-10-01", "2021-11-01", "2021-12-01", "2022-01-01", "2022-02-01", "2022-03-01", "2022-04-01", "2022-05-01", "2022-06-01", "2022-07-01", "2022-08-01", "2022-09-01", "2022-10-01", "2022-11-01", "2022-12-01", "2023-01-01", "2023-02-01", "2023-03-01", "2023-04-01", "2023-05-01", "2023-06-01", "2023-07-01", "2023-08-01", "2023-09-01", "2023-10-01", "2023-11-01", "2023-12-01", "2024-01-01", "2024-02-01", "2024-03-01", "2024-04-01", "2024-05-01", "2024-06-01", "2024-07-01", "2024-08-01", "2024-09-01", "2024-10-01", "2024-11-01", "2024-12-01", "2025-01-01", "2025-02-01", "2025-03-01", "2025-04-01", "2025-05-01", "2025-06-01", "2025-07-01", "2025-08-01", "2025-09-01", "2025-11-01", "2025-12-01", "2026-01-01", "2026-02-01", "2026-03-01", "2026-04-01"], "y": [169.3, 170.0, 171.0, 170.9, 171.2, 172.2, 172.7, 172.7, 173.6, 173.9, 174.2, 174.6, 175.6, 176.0, 176.1, 176.4, 177.3, 177.7, 177.4, 177.4, 178.1, 177.6, 177.5, 177.4, 177.7, 178.0, 178.5, 179.3, 179.5, 179.6, 180.0, 180.5, 180.8, 181.2, 181.5, 181.8, 182.6, 183.6, 183.9, 183.2, 182.9, 183.1, 183.7, 184.5, 185.1, 184.9, 185.0, 185.5, 186.3, 186.7, 187.1, 187.4, 188.2, 188.9, 189.1, 189.2, 189.8, 190.8, 191.7, 191.7, 191.6, 192.4, 193.1, 193.7, 193.6, 193.7, 194.9, 196.1, 198.8, 199.1, 198.1, 198.1, 199.3, 199.4, 199.7, 200.7, 201.3, 201.8, 202.9, 203.8, 202.8, 201.9, 202.0, 203.1, 203.437, 204.226, 205.288, 205.904, 206.755, 207.234, 207.603, 207.667, 208.547, 209.19, 210.834, 211.445, 212.174, 212.687, 213.448, 213.942, 215.208, 217.463, 219.016, 218.69, 218.877, 216.995, 213.153, 211.398, 211.933, 212.705, 212.495, 212.709, 213.022, 214.79, 214.726, 215.445, 215.861, 216.509, 217.234, 217.347, 217.488, 217.281, 217.353, 217.403, 217.29, 217.199, 217.605, 217.923, 218.275, 219.035, 219.59, 220.472, 221.187, 221.898, 223.046, 224.093, 224.806, 224.806, 225.395, 226.106, 226.597, 226.75, 227.169, 227.223, 227.842, 228.329, 228.807, 229.187, 228.713, 228.524, 228.59, 229.918, 231.015, 231.638, 231.249, 231.221, 231.679, 232.937, 232.282, 231.797, 231.893, 232.445, 232.9, 233.456, 233.544, 233.669, 234.1, 234.719, 235.288, 235.547, 236.028, 236.468, 236.918, 237.231, 237.498, 237.46, 237.477, 237.43, 236.983, 236.252, 234.747, 235.342, 235.976, 236.222, 237.001, 237.657, 238.034, 238.033, 237.498, 237.733, 238.017, 237.761, 237.652, 237.336, 238.08, 238.992, 239.557, 240.222, 240.101, 240.545, 241.176, 241.741, 242.026, 242.637, 243.618, 244.006, 243.892, 244.193, 244.004, 244.163, 244.243, 245.183, 246.435, 246.626, 247.284, 247.805, 248.859, 249.529, 249.577, 250.227, 250.792, 251.018, 251.214, 251.663, 252.182, 252.772, 252.594, 252.767, 252.561, 253.319, 254.277, 255.233, 255.296, 255.213, 255.802, 256.036, 256.43, 257.155, 257.879, 258.63, 259.127, 259.25, 258.076, 256.032, 255.802, 257.042, 258.352, 259.316, 259.997, 260.319, 260.911, 262.045, 262.687, 263.579, 264.961, 266.614, 268.383, 270.654, 271.903, 272.676, 273.91, 276.55, 278.919, 280.845, 282.543, 284.5, 287.674, 288.561, 291.298, 294.957, 294.913, 295.097, 296.349, 298.007, 298.786, 298.832, 300.42, 301.45, 301.821, 302.845, 303.334, 304.014, 304.609, 306.082, 307.276, 307.696, 308.148, 308.741, 309.698, 310.967, 312.345, 313.023, 313.175, 313.044, 313.569, 314.062, 314.732, 315.631, 316.528, 317.604, 318.961, 319.679, 319.785, 320.302, 320.62, 321.435, 322.169, 323.291, 324.245, 325.063, 326.031, 326.588, 327.46, 330.293, 332.407], "type": "scatter", "mode": "lines", "fill": "tozeroy", "fillcolor": "rgba(88,166,255,0.08)", "line": {"color": "#58a6ff", "width": 1.8}, "hovertemplate": "%{x}<br>Index 1982-1984=100: %{y:.3f}<extra></extra>", "name": "CPIAUCSL"}],{"paper_bgcolor": "#161b22", "plot_bgcolor": "#161b22", "font": {"color": "#8b949e", "size": 11, "family": "-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif"}, "title": {"text": "Consumer Price Index for All Urban Consumers: All Items in U.S. City Average", "font": {"color": "#e6edf3", "size": 12}, "x": 0.02, "xanchor": "left"}, "xaxis": {"gridcolor": "#30363d", "showgrid": true, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "yaxis": {"gridcolor": "#30363d", "showgrid": true, "title": {"text": "Index 1982-1984=100", "font": {"size": 10}}, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "margin": {"t": 50, "b": 40, "l": 60, "r": 16}, "height": 260, "hovermode": "x unified", "hoverlabel": {"bgcolor": "#0d1117", "bordercolor": "#30363d", "font": {"color": "#e6edf3", "size": 11}}},{"responsive": true, "displayModeBar": false});
+Plotly.newPlot("chart_4",[{"x": ["2004-01-01", "2005-01-01", "2006-01-01", "2007-01-01", "2008-01-01", "2009-01-01", "2010-01-01", "2011-01-01", "2012-01-01", "2013-01-01", "2014-01-01", "2015-01-01", "2016-01-01", "2017-01-01", "2018-01-01", "2019-01-01", "2020-01-01", "2021-01-01", "2022-01-01", "2023-01-01"], "y": [0.1807, 0.2261, 0.2059, 0.1856, 0.1985, 0.2084, 0.1821, 0.189, 0.1768, 0.1946, 0.2026, 0.1944, 0.2075, 0.2021, 0.1929, 0.1851, 0.2273, 0.2084, 0.2412, 0.2437], "type": "scatter", "mode": "lines", "fill": "tozeroy", "fillcolor": "rgba(210,168,255,0.07)", "line": {"color": "#d2a8ff", "width": 1.8}, "hovertemplate": "%{x}<br>%: %{y:.3f}<extra></extra>", "name": "WB:DT.ODA.ODAT.GN.ZS"}],{"paper_bgcolor": "#161b22", "plot_bgcolor": "#161b22", "font": {"color": "#8b949e", "size": 11, "family": "-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif"}, "title": {"text": "Net ODA received (% of GNI) (World Bank, Global)", "font": {"color": "#e6edf3", "size": 12}, "x": 0.02, "xanchor": "left"}, "xaxis": {"gridcolor": "#30363d", "showgrid": true, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "yaxis": {"gridcolor": "#30363d", "showgrid": true, "title": {"text": "%", "font": {"size": 10}}, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "margin": {"t": 50, "b": 40, "l": 60, "r": 16}, "height": 260, "hovermode": "x unified", "hoverlabel": {"bgcolor": "#0d1117", "bordercolor": "#30363d", "font": {"color": "#e6edf3", "size": 11}}},{"responsive": true, "displayModeBar": false});
+Plotly.newPlot("chart_5",[{"x": ["2005-01-01", "2006-01-01", "2007-01-01", "2008-01-01", "2009-01-01", "2010-01-01", "2011-01-01", "2012-01-01", "2013-01-01", "2014-01-01", "2015-01-01", "2016-01-01", "2017-01-01", "2018-01-01", "2019-01-01", "2020-01-01", "2021-01-01", "2022-01-01", "2023-01-01", "2024-01-01"], "y": [4.0545, 4.4762, 4.4138, 2.0924, -1.3186, 4.5242, 3.339, 2.7312, 2.8881, 3.133, 3.1138, 2.7936, 3.4518, 3.274, 2.6791, -2.8992, 6.4133, 3.4031, 2.9486, 2.8719], "type": "scatter", "mode": "lines", "fill": "tozeroy", "fillcolor": "rgba(210,168,255,0.07)", "line": {"color": "#d2a8ff", "width": 1.8}, "hovertemplate": "%{x}<br>%: %{y:.3f}<extra></extra>", "name": "WB:NY.GDP.MKTP.KD.ZG"}],{"paper_bgcolor": "#161b22", "plot_bgcolor": "#161b22", "font": {"color": "#8b949e", "size": 11, "family": "-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif"}, "title": {"text": "GDP growth (annual %) (World Bank, Global)", "font": {"color": "#e6edf3", "size": 12}, "x": 0.02, "xanchor": "left"}, "xaxis": {"gridcolor": "#30363d", "showgrid": true, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "yaxis": {"gridcolor": "#30363d", "showgrid": true, "title": {"text": "%", "font": {"size": 10}}, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "margin": {"t": 50, "b": 40, "l": 60, "r": 16}, "height": 260, "hovermode": "x unified", "hoverlabel": {"bgcolor": "#0d1117", "bordercolor": "#30363d", "font": {"color": "#e6edf3", "size": 11}}},{"responsive": true, "displayModeBar": false});
+Plotly.newPlot("chart_6",[{"x": ["2005-01-01", "2005-02-01", "2005-03-01", "2005-04-01", "2005-05-01", "2005-06-01", "2005-07-01", "2005-08-01", "2005-09-01", "2005-10-01", "2005-11-01", "2005-12-01", "2006-01-01", "2006-02-01", "2006-03-01", "2006-04-01", "2006-05-01", "2006-06-01", "2006-07-01", "2006-08-01", "2006-09-01", "2006-10-01", "2006-11-01", "2006-12-01", "2007-01-01", "2007-02-01", "2007-03-01", "2007-04-01", "2007-05-01", "2007-06-01", "2007-07-01", "2007-08-01", "2007-09-01", "2007-10-01", "2007-11-01", "2007-12-01", "2008-01-01", "2008-02-01", "2008-03-01", "2008-04-01", "2008-05-01", "2008-06-01", "2008-07-01", "2008-08-01", "2008-09-01", "2008-10-01", "2008-11-01", "2008-12-01", "2009-01-01", "2009-02-01", "2009-03-01", "2009-04-01", "2009-05-01", "2009-06-01", "2009-07-01", "2009-08-01", "2009-09-01", "2009-10-01", "2009-11-01", "2009-12-01", "2010-01-01", "2010-02-01", "2010-03-01", "2010-04-01", "2010-05-01", "2010-06-01", "2010-07-01", "2010-08-01", "2010-09-01", "2010-10-01", "2010-11-01", "2010-12-01", "2011-01-01", "2011-02-01", "2011-03-01", "2011-04-01", "2011-05-01", "2011-06-01", "2011-07-01", "2011-08-01", "2011-09-01", "2011-10-01", "2011-11-01", "2011-12-01", "2012-01-01", "2012-02-01", "2012-03-01", "2012-04-01", "2012-05-01", "2012-06-01", "2012-07-01", "2012-08-01", "2012-09-01", "2012-10-01", "2012-11-01", "2012-12-01", "2013-01-01", "2013-02-01", "2013-03-01", "2013-04-01", "2013-05-01", "2013-06-01", "2013-07-01", "2013-08-01", "2013-09-01", "2013-10-01", "2013-11-01", "2013-12-01", "2014-01-01", "2014-02-01", "2014-03-01", "2014-04-01", "2014-05-01", "2014-06-01", "2014-07-01", "2014-08-01", "2014-09-01", "2014-10-01", "2014-11-01", "2014-12-01", "2015-01-01", "2015-02-01", "2015-03-01", "2015-04-01", "2015-05-01", "2015-06-01", "2015-07-01", "2015-08-01", "2015-09-01", "2015-10-01", "2015-11-01", "2015-12-01", "2016-01-01", "2016-02-01", "2016-03-01", "2016-04-01", "2016-05-01", "2016-06-01", "2016-07-01", "2016-08-01", "2016-09-01", "2016-10-01", "2016-11-01", "2016-12-01", "2017-01-01", "2017-02-01", "2017-03-01", "2017-04-01", "2017-05-01", "2017-06-01", "2017-07-01", "2017-08-01", "2017-09-01", "2017-10-01", "2017-11-01", "2017-12-01", "2018-01-01", "2018-02-01", "2018-03-01", "2018-04-01", "2018-05-01", "2018-06-01", "2018-07-01", "2018-08-01", "2018-09-01", "2018-10-01", "2018-11-01", "2018-12-01", "2019-01-01", "2019-02-01", "2019-03-01", "2019-04-01", "2019-05-01", "2019-06-01", "2019-07-01", "2019-08-01", "2019-09-01", "2019-10-01", "2019-11-01", "2019-12-01", "2020-01-01", "2020-02-01", "2020-03-01", "2020-04-01", "2020-05-01", "2020-06-01", "2020-07-01", "2020-08-01", "2020-09-01", "2020-10-01", "2020-11-01", "2020-12-01", "2021-01-01", "2021-02-01", "2021-03-01", "2021-04-01", "2021-05-01", "2021-06-01", "2021-07-01", "2021-08-01", "2021-09-01", "2021-10-01", "2021-11-01", "2021-12-01", "2022-01-01", "2022-02-01", "2022-03-01", "2022-04-01", "2022-05-01", "2022-06-01", "2022-07-01", "2022-08-01", "2022-09-01", "2022-10-01", "2022-11-01", "2022-12-01", "2023-01-01", "2023-02-01", "2023-03-01", "2023-04-01", "2023-05-01", "2023-06-01", "2023-07-01", "2023-08-01", "2023-09-01", "2023-10-01", "2023-11-01", "2023-12-01", "2024-01-01", "2024-02-01", "2024-03-01", "2024-04-01", "2024-05-01", "2024-06-01", "2024-07-01", "2024-08-01", "2024-09-01", "2024-10-01", "2024-11-01", "2024-12-01"], "y": [16.2, 17.5, 17.1, 17.8, 17.8, 16.3, 16.1, 16.1, 15.5, 16.1, 17.0, 14.9, 15.1, 15.3, 16.1, 14.6, 14.0, 15.8, 15.9, 16.0, 16.3, 15.2, 14.8, 14.6, 14.8, 14.9, 14.9, 15.9, 15.9, 16.3, 15.3, 15.9, 15.9, 15.4, 16.2, 16.8, 17.8, 16.6, 16.1, 15.9, 19.0, 19.2, 20.7, 18.6, 19.1, 20.0, 20.3, 20.5, 20.7, 22.3, 22.2, 22.2, 23.4, 24.7, 24.3, 25.0, 25.9, 27.2, 26.9, 26.7, 26.1, 25.6, 26.2, 25.4, 26.5, 25.9, 25.9, 25.5, 25.8, 27.2, 24.8, 25.3, 25.7, 24.1, 24.4, 24.7, 23.9, 24.5, 24.7, 25.0, 24.4, 24.2, 24.2, 23.3, 23.6, 23.8, 24.8, 25.0, 24.4, 23.3, 23.6, 24.2, 23.8, 23.9, 23.9, 24.1, 23.7, 25.2, 24.0, 24.4, 24.4, 23.1, 23.3, 22.5, 21.3, 22.2, 20.7, 20.4, 20.4, 21.4, 20.8, 19.4, 19.3, 20.4, 20.3, 19.4, 20.1, 18.7, 17.2, 16.9, 18.5, 16.9, 17.5, 17.2, 17.8, 18.0, 16.4, 16.9, 16.5, 15.9, 15.3, 16.2, 15.9, 15.4, 16.0, 16.1, 15.9, 16.0, 15.2, 15.7, 16.1, 15.8, 15.5, 14.9, 14.6, 14.6, 13.4, 14.4, 14.2, 13.6, 13.2, 13.9, 12.9, 14.0, 16.2, 13.6, 13.8, 14.4, 13.2, 12.7, 13.1, 12.6, 12.9, 12.8, 12.3, 12.1, 12.4, 12.6, 13.2, 13.8, 12.7, 13.1, 12.9, 12.6, 12.6, 12.3, 12.2, 11.9, 12.0, 12.6, 12.5, 11.3, 14.3, 32.8, 30.5, 22.5, 19.2, 16.5, 16.0, 13.8, 13.8, 15.8, 15.1, 13.9, 12.9, 12.1, 9.7, 11.2, 10.4, 11.1, 11.2, 11.3, 10.8, 11.0, 11.2, 10.2, 10.2, 10.7, 10.5, 11.0, 11.3, 10.2, 11.4, 10.7, 11.2, 10.4, 10.6, 11.1, 9.8, 9.4, 10.3, 11.2, 11.3, 12.3, 11.7, 13.2, 11.3, 11.8, 10.7, 12.6, 12.5, 11.8, 12.3, 12.2, 12.5, 14.3, 14.3, 13.8, 13.0, 12.3], "type": "scatter", "mode": "lines", "fill": "tozeroy", "fillcolor": "rgba(255,166,87,0.07)", "line": {"color": "#ffa657", "width": 1.8}, "hovertemplate": "%{x}<br>percent: %{y:.3f}<extra></extra>", "name": "BLS:LNS14000012"}],{"paper_bgcolor": "#161b22", "plot_bgcolor": "#161b22", "font": {"color": "#8b949e", "size": 11, "family": "-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif"}, "title": {"text": "Unemployment Rate, Teens 16-19 yrs (%)", "font": {"color": "#e6edf3", "size": 12}, "x": 0.02, "xanchor": "left"}, "xaxis": {"gridcolor": "#30363d", "showgrid": true, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "yaxis": {"gridcolor": "#30363d", "showgrid": true, "title": {"text": "percent", "font": {"size": 10}}, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "margin": {"t": 50, "b": 40, "l": 60, "r": 16}, "height": 260, "hovermode": "x unified", "hoverlabel": {"bgcolor": "#0d1117", "bordercolor": "#30363d", "font": {"color": "#e6edf3", "size": 11}}},{"responsive": true, "displayModeBar": false});
+Plotly.newPlot("chart_7",[{"x": ["2005-01-01", "2005-02-01", "2005-03-01", "2005-04-01", "2005-05-01", "2005-06-01", "2005-07-01", "2005-08-01", "2005-09-01", "2005-10-01", "2005-11-01", "2005-12-01", "2006-01-01", "2006-02-01", "2006-03-01", "2006-04-01", "2006-05-01", "2006-06-01", "2006-07-01", "2006-08-01", "2006-09-01", "2006-10-01", "2006-11-01", "2006-12-01", "2007-01-01", "2007-02-01", "2007-03-01", "2007-04-01", "2007-05-01", "2007-06-01", "2007-07-01", "2007-08-01", "2007-09-01", "2007-10-01", "2007-11-01", "2007-12-01", "2008-01-01", "2008-02-01", "2008-03-01", "2008-04-01", "2008-05-01", "2008-06-01", "2008-07-01", "2008-08-01", "2008-09-01", "2008-10-01", "2008-11-01", "2008-12-01", "2009-01-01", "2009-02-01", "2009-03-01", "2009-04-01", "2009-05-01", "2009-06-01", "2009-07-01", "2009-08-01", "2009-09-01", "2009-10-01", "2009-11-01", "2009-12-01", "2010-01-01", "2010-02-01", "2010-03-01", "2010-04-01", "2010-05-01", "2010-06-01", "2010-07-01", "2010-08-01", "2010-09-01", "2010-10-01", "2010-11-01", "2010-12-01", "2011-01-01", "2011-02-01", "2011-03-01", "2011-04-01", "2011-05-01", "2011-06-01", "2011-07-01", "2011-08-01", "2011-09-01", "2011-10-01", "2011-11-01", "2011-12-01", "2012-01-01", "2012-02-01", "2012-03-01", "2012-04-01", "2012-05-01", "2012-06-01", "2012-07-01", "2012-08-01", "2012-09-01", "2012-10-01", "2012-11-01", "2012-12-01", "2013-01-01", "2013-02-01", "2013-03-01", "2013-04-01", "2013-05-01", "2013-06-01", "2013-07-01", "2013-08-01", "2013-09-01", "2013-10-01", "2013-11-01", "2013-12-01", "2014-01-01", "2014-02-01", "2014-03-01", "2014-04-01", "2014-05-01", "2014-06-01", "2014-07-01", "2014-08-01", "2014-09-01", "2014-10-01", "2014-11-01", "2014-12-01", "2015-01-01", "2015-02-01", "2015-03-01", "2015-04-01", "2015-05-01", "2015-06-01", "2015-07-01", "2015-08-01", "2015-09-01", "2015-10-01", "2015-11-01", "2015-12-01", "2016-01-01", "2016-02-01", "2016-03-01", "2016-04-01", "2016-05-01", "2016-06-01", "2016-07-01", "2016-08-01", "2016-09-01", "2016-10-01", "2016-11-01", "2016-12-01", "2017-01-01", "2017-02-01", "2017-03-01", "2017-04-01", "2017-05-01", "2017-06-01", "2017-07-01", "2017-08-01", "2017-09-01", "2017-10-01", "2017-11-01", "2017-12-01", "2018-01-01", "2018-02-01", "2018-03-01", "2018-04-01", "2018-05-01", "2018-06-01", "2018-07-01", "2018-08-01", "2018-09-01", "2018-10-01", "2018-11-01", "2018-12-01", "2019-01-01", "2019-02-01", "2019-03-01", "2019-04-01", "2019-05-01", "2019-06-01", "2019-07-01", "2019-08-01", "2019-09-01", "2019-10-01", "2019-11-01", "2019-12-01", "2020-01-01", "2020-02-01", "2020-03-01", "2020-04-01", "2020-05-01", "2020-06-01", "2020-07-01", "2020-08-01", "2020-09-01", "2020-10-01", "2020-11-01", "2020-12-01", "2021-01-01", "2021-02-01", "2021-03-01", "2021-04-01", "2021-05-01", "2021-06-01", "2021-07-01", "2021-08-01", "2021-09-01", "2021-10-01", "2021-11-01", "2021-12-01", "2022-01-01", "2022-02-01", "2022-03-01", "2022-04-01", "2022-05-01", "2022-06-01", "2022-07-01", "2022-08-01", "2022-09-01", "2022-10-01", "2022-11-01", "2022-12-01", "2023-01-01", "2023-02-01", "2023-03-01", "2023-04-01", "2023-05-01", "2023-06-01", "2023-07-01", "2023-08-01", "2023-09-01", "2023-10-01", "2023-11-01", "2023-12-01", "2024-01-01", "2024-02-01", "2024-03-01", "2024-04-01", "2024-05-01", "2024-06-01", "2024-07-01", "2024-08-01", "2024-09-01", "2024-10-01", "2024-11-01", "2024-12-01"], "y": [33.7, 33.8, 33.7, 33.8, 33.7, 33.7, 33.7, 33.7, 33.8, 33.8, 33.8, 33.8, 33.9, 33.8, 33.8, 33.9, 33.7, 33.9, 33.9, 33.8, 33.8, 33.9, 33.8, 33.9, 33.8, 33.7, 33.9, 33.8, 33.8, 33.9, 33.8, 33.8, 33.8, 33.8, 33.8, 33.8, 33.7, 33.7, 33.8, 33.7, 33.7, 33.7, 33.6, 33.7, 33.5, 33.6, 33.4, 33.3, 33.2, 33.3, 33.1, 33.1, 33.0, 33.0, 33.1, 33.1, 33.1, 33.1, 33.2, 33.2, 33.3, 33.1, 33.3, 33.4, 33.4, 33.3, 33.4, 33.5, 33.5, 33.6, 33.5, 33.5, 33.4, 33.5, 33.5, 33.6, 33.6, 33.6, 33.7, 33.5, 33.6, 33.7, 33.6, 33.7, 33.8, 33.7, 33.7, 33.7, 33.6, 33.7, 33.7, 33.6, 33.7, 33.6, 33.6, 33.8, 33.6, 33.7, 33.8, 33.6, 33.7, 33.7, 33.5, 33.6, 33.7, 33.6, 33.6, 33.6, 33.5, 33.4, 33.7, 33.7, 33.7, 33.7, 33.7, 33.7, 33.7, 33.7, 33.8, 33.8, 33.7, 33.8, 33.7, 33.6, 33.6, 33.6, 33.7, 33.8, 33.7, 33.7, 33.7, 33.8, 33.7, 33.6, 33.6, 33.6, 33.6, 33.6, 33.6, 33.5, 33.6, 33.6, 33.6, 33.5, 33.6, 33.6, 33.5, 33.7, 33.6, 33.7, 33.7, 33.6, 33.6, 33.7, 33.8, 33.7, 33.6, 33.8, 33.7, 33.8, 33.7, 33.8, 33.8, 33.7, 33.7, 33.7, 33.7, 33.7, 33.8, 33.6, 33.7, 33.6, 33.6, 33.7, 33.5, 33.6, 33.6, 33.6, 33.5, 33.6, 33.6, 33.6, 33.5, 33.5, 34.1, 34.0, 34.0, 34.1, 34.1, 34.2, 34.3, 34.2, 34.4, 34.0, 34.4, 34.4, 34.4, 34.3, 34.3, 34.2, 34.2, 34.2, 34.2, 34.2, 33.9, 34.2, 34.1, 34.1, 34.1, 34.0, 34.1, 33.9, 34.0, 34.0, 33.9, 33.8, 34.1, 33.9, 33.8, 33.8, 33.8, 33.8, 33.8, 33.8, 33.8, 33.8, 33.8, 33.7, 33.6, 33.8, 33.8, 33.7, 33.7, 33.8, 33.7, 33.7, 33.7, 33.7, 33.7, 33.7], "type": "scatter", "mode": "lines", "fill": "tozeroy", "fillcolor": "rgba(255,166,87,0.07)", "line": {"color": "#ffa657", "width": 1.8}, "hovertemplate": "%{x}<br>index: %{y:.3f}<extra></extra>", "name": "BLS:CES0500000007"}],{"paper_bgcolor": "#161b22", "plot_bgcolor": "#161b22", "font": {"color": "#8b949e", "size": 11, "family": "-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif"}, "title": {"text": "Average Weekly Hours, Private Sector", "font": {"color": "#e6edf3", "size": 12}, "x": 0.02, "xanchor": "left"}, "xaxis": {"gridcolor": "#30363d", "showgrid": true, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "yaxis": {"gridcolor": "#30363d", "showgrid": true, "title": {"text": "index", "font": {"size": 10}}, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "margin": {"t": 50, "b": 40, "l": 60, "r": 16}, "height": 260, "hovermode": "x unified", "hoverlabel": {"bgcolor": "#0d1117", "bordercolor": "#30363d", "font": {"color": "#e6edf3", "size": 11}}},{"responsive": true, "displayModeBar": false});
+Plotly.newPlot("chart_8",[{"x": ["2005-01-01", "2005-02-01", "2005-03-01", "2005-04-01", "2005-05-01", "2005-06-01", "2005-07-01", "2005-08-01", "2005-09-01", "2005-10-01", "2005-11-01", "2005-12-01", "2006-01-01", "2006-02-01", "2006-03-01", "2006-04-01", "2006-05-01", "2006-06-01", "2006-07-01", "2006-08-01", "2006-09-01", "2006-10-01", "2006-11-01", "2006-12-01", "2007-01-01", "2007-02-01", "2007-03-01", "2007-04-01", "2007-05-01", "2007-06-01", "2007-07-01", "2007-08-01", "2007-09-01", "2007-10-01", "2007-11-01", "2007-12-01", "2008-01-01", "2008-02-01", "2008-03-01", "2008-04-01", "2008-05-01", "2008-06-01", "2008-07-01", "2008-08-01", "2008-09-01", "2008-10-01", "2008-11-01", "2008-12-01", "2009-01-01", "2009-02-01", "2009-03-01", "2009-04-01", "2009-05-01", "2009-06-01", "2009-07-01", "2009-08-01", "2009-09-01", "2009-10-01", "2009-11-01", "2009-12-01", "2010-01-01", "2010-02-01", "2010-03-01", "2010-04-01", "2010-05-01", "2010-06-01", "2010-07-01", "2010-08-01", "2010-09-01", "2010-10-01", "2010-11-01", "2010-12-01", "2011-01-01", "2011-02-01", "2011-03-01", "2011-04-01", "2011-05-01", "2011-06-01", "2011-07-01", "2011-08-01", "2011-09-01", "2011-10-01", "2011-11-01", "2011-12-01", "2012-01-01", "2012-02-01", "2012-03-01", "2012-04-01", "2012-05-01", "2012-06-01", "2012-07-01", "2012-08-01", "2012-09-01", "2012-10-01", "2012-11-01", "2012-12-01", "2013-01-01", "2013-02-01", "2013-03-01", "2013-04-01", "2013-05-01", "2013-06-01", "2013-07-01", "2013-08-01", "2013-09-01", "2013-10-01", "2013-11-01", "2013-12-01", "2014-01-01", "2014-02-01", "2014-03-01", "2014-04-01", "2014-05-01", "2014-06-01", "2014-07-01", "2014-08-01", "2014-09-01", "2014-10-01", "2014-11-01", "2014-12-01", "2015-01-01", "2015-02-01", "2015-03-01", "2015-04-01", "2015-05-01", "2015-06-01", "2015-07-01", "2015-08-01", "2015-09-01", "2015-10-01", "2015-11-01", "2015-12-01", "2016-01-01", "2016-02-01", "2016-03-01", "2016-04-01", "2016-05-01", "2016-06-01", "2016-07-01", "2016-08-01", "2016-09-01", "2016-10-01", "2016-11-01", "2016-12-01", "2017-01-01", "2017-02-01", "2017-03-01", "2017-04-01", "2017-05-01", "2017-06-01", "2017-07-01", "2017-08-01", "2017-09-01", "2017-10-01", "2017-11-01", "2017-12-01", "2018-01-01", "2018-02-01", "2018-03-01", "2018-04-01", "2018-05-01", "2018-06-01", "2018-07-01", "2018-08-01", "2018-09-01", "2018-10-01", "2018-11-01", "2018-12-01", "2019-01-01", "2019-02-01", "2019-03-01", "2019-04-01", "2019-05-01", "2019-06-01", "2019-07-01", "2019-08-01", "2019-09-01", "2019-10-01", "2019-11-01", "2019-12-01", "2020-01-01", "2020-02-01", "2020-03-01", "2020-04-01", "2020-05-01", "2020-06-01", "2020-07-01", "2020-08-01", "2020-09-01", "2020-10-01", "2020-11-01", "2020-12-01", "2021-01-01", "2021-02-01", "2021-03-01", "2021-04-01", "2021-05-01", "2021-06-01", "2021-07-01", "2021-08-01", "2021-09-01", "2021-10-01", "2021-11-01", "2021-12-01", "2022-01-01", "2022-02-01", "2022-03-01", "2022-04-01", "2022-05-01", "2022-06-01", "2022-07-01", "2022-08-01", "2022-09-01", "2022-10-01", "2022-11-01", "2022-12-01", "2023-01-01", "2023-02-01", "2023-03-01", "2023-04-01", "2023-05-01", "2023-06-01", "2023-07-01", "2023-08-01", "2023-09-01", "2023-10-01", "2023-11-01", "2023-12-01", "2024-01-01", "2024-02-01", "2024-03-01", "2024-04-01", "2024-05-01", "2024-06-01", "2024-07-01", "2024-08-01", "2024-09-01", "2024-10-01", "2024-11-01", "2024-12-01"], "y": [15.9, 15.93, 15.97, 16.01, 16.04, 16.08, 16.15, 16.17, 16.19, 16.28, 16.3, 16.36, 16.42, 16.48, 16.54, 16.63, 16.65, 16.72, 16.78, 16.82, 16.87, 16.93, 16.98, 17.05, 17.09, 17.16, 17.22, 17.27, 17.34, 17.41, 17.46, 17.5, 17.55, 17.58, 17.63, 17.68, 17.74, 17.8, 17.87, 17.92, 17.98, 18.04, 18.1, 18.18, 18.2, 18.25, 18.31, 18.39, 18.39, 18.44, 18.49, 18.52, 18.53, 18.56, 18.59, 18.67, 18.7, 18.74, 18.8, 18.84, 18.88, 18.91, 18.92, 18.96, 19.01, 19.03, 19.04, 19.11, 19.11, 19.21, 19.21, 19.23, 19.33, 19.31, 19.3, 19.36, 19.41, 19.41, 19.48, 19.47, 19.49, 19.56, 19.56, 19.57, 19.59, 19.58, 19.64, 19.68, 19.68, 19.71, 19.75, 19.74, 19.79, 19.79, 19.84, 19.9, 19.93, 19.99, 20.01, 20.04, 20.05, 20.13, 20.14, 20.17, 20.23, 20.25, 20.31, 20.34, 20.39, 20.51, 20.5, 20.51, 20.53, 20.6, 20.61, 20.66, 20.66, 20.7, 20.77, 20.71, 20.8, 20.84, 20.91, 20.92, 20.98, 21.0, 21.03, 21.11, 21.09, 21.19, 21.21, 21.23, 21.31, 21.33, 21.39, 21.46, 21.48, 21.52, 21.58, 21.6, 21.62, 21.71, 21.71, 21.76, 21.82, 21.85, 21.88, 21.94, 21.97, 22.02, 22.07, 22.1, 22.18, 22.18, 22.22, 22.29, 22.36, 22.41, 22.49, 22.55, 22.6, 22.66, 22.7, 22.78, 22.86, 22.89, 23.0, 23.11, 23.13, 23.19, 23.29, 23.33, 23.4, 23.48, 23.53, 23.61, 23.68, 23.75, 23.83, 23.85, 23.91, 24.03, 24.12, 25.14, 24.98, 24.78, 24.69, 24.8, 24.82, 24.84, 24.94, 25.16, 25.16, 25.25, 25.33, 25.52, 25.68, 25.82, 25.97, 26.12, 26.3, 26.45, 26.56, 26.76, 26.91, 26.97, 27.1, 27.28, 27.4, 27.52, 27.66, 27.75, 27.87, 27.99, 28.11, 28.22, 28.31, 28.42, 28.56, 28.7, 28.78, 28.89, 29.01, 29.06, 29.18, 29.26, 29.37, 29.47, 29.61, 29.66, 29.78, 29.85, 29.97, 30.07, 30.16, 30.27, 30.39, 30.48, 30.56, 30.66], "type": "scatter", "mode": "lines", "fill": "tozeroy", "fillcolor": "rgba(255,166,87,0.07)", "line": {"color": "#ffa657", "width": 1.8}, "hovertemplate": "%{x}<br>$/hour: %{y:.3f}<extra></extra>", "name": "BLS:CES0500000008"}],{"paper_bgcolor": "#161b22", "plot_bgcolor": "#161b22", "font": {"color": "#8b949e", "size": 11, "family": "-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif"}, "title": {"text": "Average Hourly Earnings, Private Sector ($/hr)", "font": {"color": "#e6edf3", "size": 12}, "x": 0.02, "xanchor": "left"}, "xaxis": {"gridcolor": "#30363d", "showgrid": true, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "yaxis": {"gridcolor": "#30363d", "showgrid": true, "title": {"text": "$/hour", "font": {"size": 10}}, "tickfont": {"size": 10}, "linecolor": "#30363d"}, "margin": {"t": 50, "b": 40, "l": 60, "r": 16}, "height": 260, "hovermode": "x unified", "hoverlabel": {"bgcolor": "#0d1117", "bordercolor": "#30363d", "font": {"color": "#e6edf3", "size": 11}}},{"responsive": true, "displayModeBar": false});
+</script>
+</body></html>
