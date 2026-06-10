@@ -2,6 +2,8 @@ import json
 from synthesis.data.fred import DataSeries
 from synthesis.alignment.qqa import AlignmentResult, build_gap_matrix
 from synthesis.alignment.meta import PooledEvidence
+from synthesis.extraction.effect_sizes import EffectSize
+from synthesis.report.forest import build_forest_plot
 
 
 BG    = "#0d1117"
@@ -111,6 +113,7 @@ def build_html(
     fred_count: int = 0,
     wb_count: int = 0,
     pooled: PooledEvidence | None = None,
+    effect_sizes: list[EffectSize] | None = None,
 ) -> str:
     gap_matrix = build_gap_matrix([r.claim for r in alignment])
 
@@ -229,6 +232,9 @@ def build_html(
         text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
         text = re.sub(r"\*(.+?)\*", r"<em>\1</em>", text)
         return text
+
+    # Pre-build forest plot
+    forest_div, forest_js = build_forest_plot(effect_sizes or [])
 
     # Pre-build chart divs and collect all JS calls
     chart_divs = []
@@ -367,6 +373,23 @@ def build_html(
   </div>
 </div>"""
         h += "</div></div>"
+
+    # Forest plot
+    if forest_div:
+        h += '<div class="section"><h2>Forest Plot — Effect Sizes Across Studies</h2>'
+        h += (
+            '<p style="font-size:12px;margin-bottom:12px;">'
+            'Squares = individual study estimates (size ∝ citations). '
+            '<span style="color:#3fb950">Green</span> = CI excludes zero positively. '
+            '<span style="color:#f85149">Red</span> = CI excludes zero negatively. '
+            'Gray = CI crosses zero or not reported. '
+            '◆ Diamond = citation-weighted pooled estimate.'
+            '</p>'
+        )
+        h += f'<div class="chart-card" style="padding:4px">{forest_div}</div>'
+        h += "</div>"
+        if forest_js:
+            chart_scripts.append(forest_js)
 
     # Interactive data charts
     if chart_divs:

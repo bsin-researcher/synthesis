@@ -10,7 +10,7 @@ from rich import print as rprint
 from dotenv import load_dotenv
 
 from synthesis.retrieval import search_arxiv, search_openalex, search_nber, deduplicate
-from synthesis.extraction import extract_claims
+from synthesis.extraction import extract_claims, extract_effect_sizes
 from synthesis.data import FredClient, fetch_worldbank
 from synthesis.alignment import score_alignment, pool_evidence
 from synthesis.alignment.qqa import build_gap_matrix
@@ -100,6 +100,17 @@ def research(
 
     console.print(f"[green]✓[/green] {len(claims)} empirical claims extracted")
 
+    # ── Step 2b: Extract numerical effect sizes ───────────────────────────────
+    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"),
+                  console=console) as prog:
+        prog.add_task("Extracting numerical effect sizes from abstracts...", total=None)
+        effect_sizes = extract_effect_sizes(all_papers, question, client)
+
+    if effect_sizes:
+        console.print(f"[green]✓[/green] {len(effect_sizes)} numerical effect sizes extracted")
+    else:
+        console.print("[dim]  No explicit numerical effect sizes found in abstracts[/dim]")
+
     # ── Step 3: Pull FRED data ────────────────────────────────────────────────
     fred_series = []
     if fred_client:
@@ -174,6 +185,7 @@ def research(
     html_content = build_html(
         question, report_text, alignment, data_series, len(all_papers),
         fred_count=len(fred_series), wb_count=len(wb_series), pooled=pooled,
+        effect_sizes=effect_sizes,
     )
     with open(html_path, "w") as f:
         f.write(html_content)
