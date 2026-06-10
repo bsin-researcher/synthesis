@@ -40,7 +40,7 @@ Research question: "{question}"
 Papers:
 {abstracts_text}
 
-For each paper that makes a relevant empirical or theoretical claim about the research question, extract up to TWO distinct claims. Only extract a second claim if it is meaningfully different from the first (e.g., different outcome variable, different subgroup, or a key heterogeneous effect).
+For each paper, extract up to TWO empirical or theoretical claims relevant to the research question. Be inclusive — if a paper touches the topic even indirectly (related variables, relevant mechanism, adjacent finding), extract it. Only skip a paper if it has zero connection to the question.
 
 Return a JSON array. Each item must have exactly these fields:
 - variable_a: the independent variable or cause (string)
@@ -61,7 +61,7 @@ Return ONLY the JSON array, no other text."""
 
     resp = client.messages.create(
         model="claude-opus-4-8",
-        max_tokens=4096,
+        max_tokens=8192,
         thinking={"type": "adaptive"},
         messages=[{"role": "user", "content": prompt}],
     )

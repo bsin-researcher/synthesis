@@ -19,11 +19,23 @@ class Paper:
     citations: int = 0
 
 
+def _keywords(query: str) -> str:
+    """Strip question words so arXiv gets clean keyword search terms."""
+    import re
+    stopwords = {"does", "do", "is", "are", "the", "a", "an", "in", "of",
+                 "to", "and", "or", "for", "on", "how", "what", "why",
+                 "when", "which", "by", "with", "from", "that", "this"}
+    words = re.sub(r"[?!.,;:'\"]", "", query.lower()).split()
+    keywords = [w for w in words if w not in stopwords and len(w) > 2]
+    return "+".join(keywords)
+
+
 def search_arxiv(query: str, max_results: int = 15) -> list[Paper]:
     # Build URL manually so +OR+/+AND+ operators are not double-encoded
     econ_cats = "cat:econ.GN+OR+cat:econ.EM+OR+cat:econ.LG+OR+cat:econ.TH+OR+cat:econ.HE+OR+cat:econ.IO+OR+cat:q-fin.EC"
-    encoded_query = urllib.parse.quote(query)
-    search_query = f"({encoded_query})+AND+({econ_cats})"
+    # Use keyword extraction so arXiv gets clean terms, not a full question sentence
+    keywords = _keywords(query)
+    search_query = f"({keywords})+AND+({econ_cats})"
     url = (
         f"{ARXIV_API}?search_query={search_query}"
         f"&start=0&max_results={max_results}&sortBy=relevance&sortOrder=descending"
