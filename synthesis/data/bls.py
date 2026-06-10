@@ -76,6 +76,29 @@ def fetch_bls(
     return _fetch_series(selected)
 
 
+# Keyword-based fallbacks — used when Claude selection fails or returns unknown IDs
+_KEYWORD_FALLBACKS: dict[str, list[str]] = {
+    "minimum wage":  ["LNS14000012", "CES7072200001", "CES0500000007"],
+    "wage":          ["CES0500000008", "CES7072200008", "LNS14027659"],
+    "unemployment":  ["LNS14000012", "LNS14000024", "LNS14032183"],
+    "employment":    ["CES7072200001", "CES4200000001", "LNS12000000"],
+    "inequality":    ["LNS14032183",   "LNS14027659",   "CES0500000008"],
+    "hours":         ["CES0500000007", "CES7072200007", "CES4200000007"],
+    "inflation":     ["CES0500000008", "CES4200000008", "CES7072200008"],
+    "immigration":   ["LNS14000006",   "LNS12000000",   "CES0500000008"],
+}
+
+_DEFAULT_FALLBACK = ["LNS14000012", "CES0500000007", "CES0500000008"]
+
+
+def _keyword_fallback(question: str, max_series: int) -> list[str]:
+    q = question.lower()
+    for keyword, series in _KEYWORD_FALLBACKS.items():
+        if keyword in q:
+            return series[:max_series]
+    return _DEFAULT_FALLBACK[:max_series]
+
+
 def _select_series(
     question: str,
     client: anthropic.Anthropic,
@@ -95,9 +118,8 @@ Prioritize series that test the specific mechanisms the question is about:
 - Minimum wage / disemployment → teen unemployment, food service employment, weekly hours
 - Wages / inequality → earnings series, education-group unemployment
 - Hours adjustment → weekly hours series
-- Regional effects → state unemployment pairs (e.g. NJ + PA for Card-Krueger)
 
-Return ONLY a JSON array of series ID strings."""
+Return ONLY a JSON array of series ID strings exactly as shown in the catalog."""
 
     try:
         resp = client.messages.create(
@@ -111,9 +133,13 @@ Return ONLY a JSON array of series ID strings."""
             if raw.startswith("json"):
                 raw = raw[4:]
         ids = json.loads(raw.strip())
-        return [s for s in ids if s in BLS_CATALOG][:max_series]
+        valid = [s for s in ids if s in BLS_CATALOG][:max_series]
+        if valid:
+            return valid
     except Exception:
-        return []
+        pass
+    # Fallback: keyword match guarantees we always attempt the API call
+    return _keyword_fallback(question, max_series)
 
 
 def _fetch_series(series_ids: list[str]) -> list[DataSeries]:
@@ -134,11 +160,12 @@ def _fetch_series(series_ids: list[str]) -> list[DataSeries]:
         resp = requests.post(BLS_API_URL, json=payload, timeout=25)
         resp.raise_for_status()
         data = resp.json()
-    except Exception:
-        return []
+    except Exception as e:
+        raise RuntimeError(f"BLS API request failed: {e}") from e
 
     if data.get("status") != "REQUEST_SUCCEEDED":
-        return []
+        msgs = "; ".join(str(m) for m in data.get("message", []))
+        raise RuntimeError(f"BLS API status={data.get('status')!r}: {msgs}")
 
     results = []
     for series in data.get("Results", {}).get("series", []):
