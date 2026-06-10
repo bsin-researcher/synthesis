@@ -6,7 +6,7 @@
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://pypi.org/project/synthesis-econ/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**[→ Live Demo](https://synthesis-econ.streamlit.app)** — browse 6 pre-run research briefs instantly, no install required.
+**[→ Live Demo](https://synthesis-mxqxkeygdnzx3rciazfpsj.streamlit.app)** — browse 6 pre-run research briefs instantly, no install required.
 
 ---
 
