@@ -45,9 +45,17 @@ def _plotly_spec(series: DataSeries, chart_id: str) -> tuple[str, str]:
     dates = df["date"].dt.strftime("%Y-%m-%d").tolist()
     values = [round(float(v), 4) for v in df["value"].tolist()]
 
-    is_wb = series.series_id.startswith("WB:")
-    line_color = PURP if is_wb else BLUE
-    fill_color = "rgba(210,168,255,0.07)" if is_wb else "rgba(88,166,255,0.08)"
+    is_wb  = series.series_id.startswith("WB:")
+    is_bls = series.series_id.startswith("BLS:")
+    if is_wb:
+        line_color = PURP
+        fill_color = "rgba(210,168,255,0.07)"
+    elif is_bls:
+        line_color = ORG
+        fill_color = "rgba(255,166,87,0.07)"
+    else:
+        line_color = BLUE
+        fill_color = "rgba(88,166,255,0.08)"
 
     trace = {
         "x": dates,
@@ -112,6 +120,7 @@ def build_html(
     papers_count: int,
     fred_count: int = 0,
     wb_count: int = 0,
+    bls_count: int = 0,
     pooled: PooledEvidence | None = None,
     effect_sizes: list[EffectSize] | None = None,
 ) -> str:
@@ -176,7 +185,8 @@ def build_html(
     .chart-badge {{ display:inline-block; padding:2px 8px; border-radius:4px;
                     font-size:10px; font-weight:700; margin:6px 10px 2px;
                     background:rgba(88,166,255,0.15); color:var(--blue); }}
-    .chart-badge.wb {{ background:rgba(210,168,255,0.15); color:var(--purp); }}
+    .chart-badge.wb  {{ background:rgba(210,168,255,0.15); color:var(--purp); }}
+    .chart-badge.bls {{ background:rgba(255,166,87,0.15);  color:var(--org);  }}
     .chart-meta {{ padding:6px 12px 10px; font-size:12px; color:var(--muted); }}
     .gap-list {{ list-style:none; padding:0; }}
     .gap-list li {{ background:var(--surf); border:1px solid var(--bord);
@@ -243,9 +253,14 @@ def build_html(
         cid = f"chart_{i}"
         div_html, js_call = _plotly_spec(s, cid)
         if div_html:
-            is_wb = s.series_id.startswith("WB:")
-            badge_cls = "chart-badge wb" if is_wb else "chart-badge"
-            badge_txt = "World Bank" if is_wb else "FRED"
+            is_wb  = s.series_id.startswith("WB:")
+            is_bls = s.series_id.startswith("BLS:")
+            if is_wb:
+                badge_cls, badge_txt = "chart-badge wb",  "World Bank"
+            elif is_bls:
+                badge_cls, badge_txt = "chart-badge bls", "BLS"
+            else:
+                badge_cls, badge_txt = "chart-badge",     "FRED"
             summ = s.summary()
             meta = (
                 f"{s.series_id} &nbsp;·&nbsp; "
@@ -263,7 +278,8 @@ def build_html(
             chart_scripts.append(js_call)
 
     source_line = "arXiv · OpenAlex · NBER"
-    data_source_line = "FRED · World Bank" if wb_count else "FRED"
+    parts = ["FRED"] + (["World Bank"] if wb_count else []) + (["BLS"] if bls_count else [])
+    data_source_line = " · ".join(parts)
 
     h = f"""<!DOCTYPE html>
 <html lang="en">
@@ -285,7 +301,7 @@ def build_html(
   <div class="meta">
     Model: claude-opus-4-8 · Adaptive Thinking<br>
     Literature: {source_line}<br>
-    Data: {data_source_line} &nbsp;·&nbsp; synthesis-econ v0.1.0
+    Data: {data_source_line} &nbsp;·&nbsp; synthesis-econ v0.3.0
   </div>
 </div>
 

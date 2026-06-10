@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 from synthesis.retrieval import search_arxiv, search_openalex, search_nber, deduplicate
 from synthesis.extraction import extract_claims, extract_effect_sizes
-from synthesis.data import FredClient, fetch_worldbank
+from synthesis.data import FredClient, fetch_worldbank, fetch_bls
 from synthesis.alignment import score_alignment, pool_evidence
 from synthesis.alignment.qqa import build_gap_matrix
 from synthesis.report import generate_report, build_html
@@ -29,6 +29,7 @@ def research(
     max_papers: int = typer.Option(24, "--papers", "-p", help="Max papers to retrieve"),
     no_fred: bool = typer.Option(False, "--no-fred", help="Skip FRED data (if no API key)"),
     no_worldbank: bool = typer.Option(False, "--no-worldbank", help="Skip World Bank data"),
+    no_bls: bool = typer.Option(False, "--no-bls", help="Skip BLS demographic/industry data"),
 ):
     """
     Run a full Synthesis research analysis on any economics question.
@@ -137,7 +138,20 @@ def research(
 
         console.print(f"[green]✓[/green] {len(wb_series)} World Bank series retrieved")
 
-    data_series = fred_series + wb_series
+    # ── Step 4b: Pull BLS data ────────────────────────────────────────────────
+    bls_series = []
+    if not no_bls:
+        with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"),
+                      console=console) as prog:
+            prog.add_task("Pulling BLS demographic & industry data...", total=None)
+            try:
+                bls_series = fetch_bls(question, client, max_series=3)
+            except Exception as e:
+                console.print(f"[yellow]BLS warning:[/yellow] {e}")
+
+        console.print(f"[green]✓[/green] {len(bls_series)} BLS series retrieved")
+
+    data_series = fred_series + wb_series + bls_series
 
     # ── Step 5: QQA Alignment ─────────────────────────────────────────────────
     alignment = []
@@ -184,7 +198,8 @@ def research(
 
     html_content = build_html(
         question, report_text, alignment, data_series, len(all_papers),
-        fred_count=len(fred_series), wb_count=len(wb_series), pooled=pooled,
+        fred_count=len(fred_series), wb_count=len(wb_series),
+        bls_count=len(bls_series), pooled=pooled,
         effect_sizes=effect_sizes,
     )
     with open(html_path, "w") as f:
